@@ -1,4 +1,6 @@
 deploy/.env.deploy
 deploy/node_modules/
+webmail/**/node_modules/
+webmail/**/dist/
 *.log
 .DS_Store

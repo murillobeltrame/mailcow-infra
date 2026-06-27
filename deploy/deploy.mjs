@@ -115,6 +115,14 @@ const commands = {
     runSsh("fix-sogo-all.sh", getEnv());
   },
 
+  webmail() {
+    runNode("upload-webmail.mjs", [], getEnv());
+  },
+
+  "redirect-webmail"() {
+    runSsh("redirect-webmail.sh", getEnv());
+  },
+
   bootstrap() {
     runSsh("bootstrap-all-domains-db.sh", getEnv());
     runSsh("bootstrap-all-domains.sh", getEnv());
@@ -203,6 +211,8 @@ Mailcow Nive Mail — deploy
   node deploy.mjs ssl-fix           Corrige HTTPS
   node deploy.mjs test-api          Testa API Mailcow
   node deploy.mjs branding-local    Preview logo/CSS (dev, sem commit)
+  node deploy.mjs webmail           Webmail moderno React + redirect
+  node deploy.mjs redirect-webmail  Aponta login Mailcow para /mail/
 
 ── GitHub Actions (código do repo) ──
   git push                          branding/ ou deploy/ → Actions

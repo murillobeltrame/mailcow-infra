@@ -7,7 +7,7 @@ Dois fluxos complementares:
 | **SSH local** | Configuração, DNS, caixas, validação, fixes rápidos | `node deploy.mjs …` na sua máquina |
 | **GitHub Actions** | Código versionado (branding, scripts, melhorias) | `git push` ou workflow manual |
 
-O deploy via Actions fica **sempre preparado** — qualquer mudança em `branding/` ou `deploy/` dispara o pipeline. Para operação do dia a dia, use SSH local: é mais rápido e não exige commit.
+O deploy via Actions fica **sempre preparado** — qualquer mudança em `branding/`, `webmail/` ou `deploy/` dispara o pipeline. Para operação do dia a dia, use SSH local: é mais rápido e não exige commit.
 
 ---
 
@@ -42,6 +42,8 @@ node deploy.mjs bootstrap
 node deploy.mjs enable-sogo     # webmail SOGo
 node deploy.mjs fix-sogo        # corrige SSO/webmail SOGo no VPS
 node deploy.mjs disable-sogo    # desativa SOGo (economia RAM)
+node deploy.mjs webmail         # webmail moderno React em /mail/
+node deploy.mjs redirect-webmail # redireciona login Mailcow para /mail/
 ```
 
 Comandos locais **não** exigem GitHub Actions. Usam `_ssh-run.mjs` com retry de conexão SSH.

@@ -1,83 +1,283 @@
-/* Nive Mail — overrides SOGo (complementa custom-theme.js) */
+/* ═══════════════════════════════════════════════════════════
+   Nive Mail — SOGo webmail modernizado
+   Complementa custom-theme.js (Angular Material)
+   ═══════════════════════════════════════════════════════════ */
 
+:root {
+  --nive-primary: #22578d;
+  --nive-primary-hover: #1a4f7a;
+  --nive-primary-subtle: rgb(34 87 141 / 0.1);
+  --nive-sidebar: #1e293b;
+  --nive-bg: #f8fafc;
+  --nive-surface: #ffffff;
+  --nive-border: #e2e8f0;
+  --nive-text: #0f172a;
+  --nive-muted: #64748b;
+  --nive-radius: 0.625rem;
+}
+
+/* ── Base ── */
 body,
-.md-default-theme {
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-}
-
-md-toolbar.md-default-theme:not(.md-menu-toolbar),
-md-toolbar:not(.md-menu-toolbar) {
-  background-color: #22578d !important;
-  color: rgba(255, 255, 255, 0.95) !important;
-}
-
-md-toolbar.md-hue-2 {
-  background-color: #1e293b !important;
-}
-
-.md-button.md-primary,
-.md-button.md-default-theme.md-primary {
-  background-color: #22578d !important;
-  color: #ffffff !important;
-}
-
-.md-button.md-primary:not([disabled]):hover {
-  background-color: #1a4f7a !important;
+.md-default-theme,
+html {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 md-content.md-default-theme,
 md-content {
-  background-color: #f4f7fb;
+  background-color: var(--nive-bg) !important;
+}
+
+/* ── Esconde cabeçalho de data gigante (confuso) ── */
+#calendarHeader,
+.calendarHeader,
+.sogoDateHeader,
+md-toolbar .calendarDate,
+.toolbar-calendar-date,
+[class*="calendar-date"],
+md-toolbar h1.text-uppercase {
+  display: none !important;
+}
+
+/* Toolbar principal — compacta e limpa */
+md-toolbar.md-default-theme:not(.md-menu-toolbar),
+md-toolbar:not(.md-menu-toolbar) {
+  background: var(--nive-sidebar) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12) !important;
+}
+
+md-toolbar md-toolbar-tools {
+  height: 56px !important;
+  max-height: 56px !important;
+}
+
+md-toolbar.md-hue-2 {
+  background: var(--nive-primary) !important;
+}
+
+/* ── Sidebar de pastas ── */
+#foldersList,
+.sogoSidebar,
+.left-pane,
+.mailbox-list {
+  background: var(--nive-surface) !important;
+  border-right: 1px solid var(--nive-border) !important;
+}
+
+md-list-item.md-default-theme,
+md-list-item {
+  border-radius: var(--nive-radius) !important;
+  margin: 2px 8px !important;
+  transition: background 0.15s ease !important;
 }
 
 md-list-item.md-default-theme .md-list-item-inner,
 md-list-item .md-list-item-inner {
-  color: #1d1d1b;
+  color: var(--nive-text) !important;
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border-radius: var(--nive-radius) !important;
 }
 
 md-list-item.md-default-theme.selected .md-list-item-inner,
-md-list-item.selected .md-list-item-inner {
-  background-color: rgb(34 87 141 / 0.12) !important;
-  color: #22578d !important;
+md-list-item.selected .md-list-item-inner,
+md-list-item.md-default-theme.md-clickable:hover .md-list-item-inner,
+md-list-item.md-clickable:hover .md-list-item-inner {
+  background-color: var(--nive-primary-subtle) !important;
+  color: var(--nive-primary) !important;
 }
 
-md-progress-linear .md-bar {
-  background-color: #22578d !important;
+md-list-item.selected {
+  border-left: 3px solid var(--nive-primary) !important;
 }
 
-md-progress-circular .md-inner .md-left .md-half-circle,
-md-progress-circular .md-inner .md-right .md-half-circle {
-  border-color: #22578d !important;
+/* ── Lista de mensagens ── */
+.message-list,
+#messagesTable,
+.mail-list {
+  background: var(--nive-surface) !important;
 }
 
-a,
-.md-default-theme a {
-  color: #22578d;
+.message-list md-list-item,
+.mail-list-item,
+[ng-repeat*="message"] md-list-item {
+  border-bottom: 1px solid var(--nive-border) !important;
 }
 
-a:hover {
-  color: #1a4f7a;
+.message-list md-list-item.unread .md-list-item-inner,
+.mail-list-item.unread {
+  font-weight: 600 !important;
+  background: var(--nive-primary-subtle) !important;
 }
 
-.sogo-login-box,
-#loginScreen {
-  background-color: #f4f7fb;
+/* ── Painel de leitura ── */
+.message-view,
+#messageContent,
+.reading-pane {
+  background: var(--nive-surface) !important;
+  padding: 1.5rem !important;
 }
 
-.sogo-login-box md-toolbar,
-#loginScreen md-toolbar {
-  background-color: #22578d !important;
+.message-view .subject,
+.message-subject {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: var(--nive-text) !important;
+  line-height: 1.4 !important;
+}
+
+/* ── Botões ── */
+.md-button.md-primary,
+.md-button.md-default-theme.md-primary {
+  background-color: var(--nive-primary) !important;
+  color: #fff !important;
+  border-radius: var(--nive-radius) !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+.md-button.md-primary:not([disabled]):hover {
+  background-color: var(--nive-primary-hover) !important;
+}
+
+.md-button.md-fab,
+.md-button.md-fab.md-primary {
+  background-color: var(--nive-primary) !important;
+  box-shadow: 0 4px 14px rgb(34 87 141 / 0.35) !important;
+}
+
+.md-button {
+  border-radius: var(--nive-radius) !important;
+  text-transform: none !important;
+}
+
+/* ── Inputs ── */
+md-input-container .md-input,
+input,
+textarea,
+select {
+  border-radius: calc(var(--nive-radius) - 2px) !important;
+}
+
+md-input-container.md-default-theme .md-input:focus,
+md-input-container .md-input:focus {
+  border-color: var(--nive-primary) !important;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid #22578d;
+  outline: 2px solid var(--nive-primary) !important;
   outline-offset: 1px;
+}
+
+/* ── Links ── */
+a,
+.md-default-theme a {
+  color: var(--nive-primary) !important;
+}
+
+a:hover {
+  color: var(--nive-primary-hover) !important;
+}
+
+/* ── Progress ── */
+md-progress-linear .md-bar {
+  background-color: var(--nive-primary) !important;
+}
+
+md-progress-circular .md-inner .md-left .md-half-circle,
+md-progress-circular .md-inner .md-right .md-half-circle {
+  border-color: var(--nive-primary) !important;
+}
+
+/* ── Login SOGo ── */
+.sogo-login-box,
+#loginScreen {
+  background: linear-gradient(135deg, var(--nive-bg) 0%, #e8eef5 100%) !important;
+}
+
+.sogo-login-box md-toolbar,
+#loginScreen md-toolbar {
+  background: var(--nive-primary) !important;
+  border-radius: var(--nive-radius) var(--nive-radius) 0 0 !important;
+}
+
+.sogo-login-box md-card,
+#loginScreen md-card {
+  border-radius: var(--nive-radius) !important;
+  box-shadow: 0 8px 30px rgb(15 23 42 / 0.1) !important;
+  overflow: hidden !important;
+}
+
+/* ── Dialogs ── */
+md-dialog {
+  border-radius: calc(var(--nive-radius) + 4px) !important;
+  box-shadow: 0 20px 50px rgb(15 23 42 / 0.15) !important;
+}
+
+md-dialog md-toolbar {
+  background: var(--nive-surface) !important;
+  color: var(--nive-text) !important;
+  border-bottom: 1px solid var(--nive-border) !important;
+}
+
+/* ── Toolbar secundária (busca/filtros) ── */
+md-toolbar.md-menu-toolbar,
+.sub-toolbar {
+  background: var(--nive-surface) !important;
+  color: var(--nive-text) !important;
+  border-bottom: 1px solid var(--nive-border) !important;
+  min-height: 48px !important;
+}
+
+/* ── Ícones utilitários (topo) ── */
+.top-toolbar md-icon,
+md-toolbar md-icon {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ── Storage bar ── */
+.quota-bar,
+.storage-info {
+  font-size: 0.75rem !important;
+  color: var(--nive-muted) !important;
+  padding: 8px 12px !important;
+}
+
+/* ── Empty state ── */
+.no-message,
+.empty-state {
+  color: var(--nive-muted) !important;
+  font-size: 0.875rem !important;
+  padding: 3rem 1rem !important;
+  text-align: center !important;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ── Responsivo ── */
+@media (max-width: 960px) {
+  md-toolbar.md-default-theme:not(.md-menu-toolbar),
+  md-toolbar:not(.md-menu-toolbar) {
+    min-height: 48px !important;
+  }
 }
