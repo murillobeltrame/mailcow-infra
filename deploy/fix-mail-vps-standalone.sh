@@ -75,14 +75,23 @@ for d in nivesistemas.com.br corelycommerce.com.br; do
   docker compose exec -T rspamd-mailcow cat "/var/lib/rspamd/dkim/${d}.txt" 2>/dev/null | head -3 || true
 done
 docker compose restart rspamd-mailcow postfix-mailcow
-sleep 5
+
+echo "==> Aguardando Postfix..."
+for i in $(seq 1 30); do
+  if docker compose exec -T postfix-mailcow postfix status >/dev/null 2>&1; then
+    echo "  Postfix pronto (${i}s)"
+    break
+  fi
+  sleep 1
+done
+sleep 2
 
 echo ""
 echo "==> Teste IMAP/SMTP"
 if [[ -n "${MAILCOW_PASS}" ]]; then
   export MAILCOW_PASS
   python3 -c "
-import imaplib, smtplib, os, sys
+import imaplib, smtplib, ssl, os, sys, time
 pw = os.environ['MAILCOW_PASS']
 accounts = ['contato@nivesistemas.com.br','contato@corelycommerce.com.br','noreply@nivesistemas.com.br','noreply@corelycommerce.com.br']
 ok = True
@@ -95,14 +104,27 @@ for user in accounts:
     except Exception as e:
         ok = False
         print(f'IMAP FAIL: {user} — {e}')
-try:
-    s = smtplib.SMTP_SSL('127.0.0.1', 465, timeout=15)
-    s.login(accounts[0], pw)
-    s.quit()
-    print(f'SMTP OK: {accounts[0]} (465)')
-except Exception as e:
-    ok = False
-    print(f'SMTP FAIL: {e}')
+user = accounts[0]
+for port, mode in [(465, 'ssl'), (587, 'starttls')]:
+    for attempt in range(3):
+        try:
+            if mode == 'ssl':
+                s = smtplib.SMTP_SSL('127.0.0.1', port, timeout=15)
+            else:
+                s = smtplib.SMTP('127.0.0.1', port, timeout=15)
+                s.ehlo()
+                s.starttls(context=ssl.create_default_context())
+                s.ehlo()
+            s.login(user, pw)
+            s.quit()
+            print(f'SMTP OK: {user} ({port})')
+            break
+        except Exception as e:
+            if attempt == 2:
+                ok = False
+                print(f'SMTP FAIL {port}: {e}')
+            else:
+                time.sleep(2)
 sys.exit(0 if ok else 1)
 "
 fi
