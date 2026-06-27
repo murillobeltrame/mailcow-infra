@@ -57,6 +57,7 @@ set_conf ADDITIONAL_SAN ""
 set_conf IPV4_NETWORK "${MAILCOW_IPV4_NETWORK:-172.23.1}"
 # IPv6 Docker desnecessário para SMTP/IMAP; evita conflito de pools
 set_conf ENABLE_IPV6 false
+set_conf SKIP_HTTP_VERIFICATION y
 
 if [[ -n "${MAILCOW_PASS:-}" ]]; then
   set_conf MAILCOW_PASS "${MAILCOW_PASS}"

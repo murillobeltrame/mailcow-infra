@@ -117,6 +117,16 @@ console.log(`==> DNS Cloudflare: ${domain}`);
 console.log(`    hostname mail: ${mailHost}`);
 
 await upsertRecord(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, "A", mailHost, VPS_IP);
+
+for (const sub of ["autodiscover", "autoconfig", "mta-sts"]) {
+  await upsertRecord(
+    CLOUDFLARE_API_TOKEN,
+    CLOUDFLARE_ZONE_ID,
+    "A",
+    `${sub}.${domain}`,
+    VPS_IP
+  );
+}
 await upsertRecord(
   CLOUDFLARE_API_TOKEN,
   CLOUDFLARE_ZONE_ID,
