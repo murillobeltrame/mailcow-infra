@@ -29,6 +29,7 @@ on:
           - bootstrap
           - migrate-email
           - disable-sogo
+          - enable-sogo
           - test-api
 
 concurrency:

@@ -107,6 +107,14 @@ const commands = {
     runSsh("disable-sogo.sh", getEnv());
   },
 
+  "enable-sogo"() {
+    runSsh("enable-sogo.sh", getEnv());
+  },
+
+  "fix-sogo"() {
+    runSsh("fix-sogo-all.sh", getEnv());
+  },
+
   bootstrap() {
     runSsh("bootstrap-all-domains-db.sh", getEnv());
     runSsh("bootstrap-all-domains.sh", getEnv());

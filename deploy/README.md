@@ -39,6 +39,9 @@ node deploy.mjs branding-local
 node deploy.mjs ssl-fix
 node deploy.mjs test-api
 node deploy.mjs bootstrap
+node deploy.mjs enable-sogo     # webmail SOGo
+node deploy.mjs fix-sogo        # corrige SSO/webmail SOGo no VPS
+node deploy.mjs disable-sogo    # desativa SOGo (economia RAM)
 ```
 
 Comandos locais **não** exigem GitHub Actions. Usam `_ssh-run.mjs` com retry de conexão SSH.
@@ -156,6 +159,8 @@ Opcionais com padrão: `VPS_IP`, `MAILCOW_HOSTNAME`, `MAIL_DOMAIN`, etc. — vej
 **Branding sumiu após update:** workflow `update` ou `branding-local` / push.
 
 **PTR/rDNS:** manual no hPanel — `2.25.181.76` → `mail.nivesistemas.com.br`
+
+**SMTP/IMAP com proxy no `mail.*`:** use `smtp.nivesistemas.com.br` (DNS only). O host `mail.nivesistemas.com.br` está proxied no Cloudflare — portas 465/587 **não funcionam** nele. Rode `node ensure-smtp-dns.mjs` se o registro ainda não existir.
 
 ---
 

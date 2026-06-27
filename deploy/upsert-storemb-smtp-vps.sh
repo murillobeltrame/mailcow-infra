@@ -8,7 +8,7 @@ MAILCOW_PASS=$(grep '^MAILCOW_PASS=' /opt/mailcow-dockerized/mailcow.conf | cut 
 
 export DATABASE_URL="postgresql://corely:${PG_PASS}@127.0.0.1:5434/storembimportados?schema=public"
 export SMTP_PASSWORD="${MAILCOW_PASS}"
-export SMTP_HOST="mail.nivesistemas.com.br"
+export SMTP_HOST="smtp.nivesistemas.com.br"
 export SMTP_CONTACT_EMAIL="contato@storembimportados.com.br"
 export TENANT_SLUG="mbimportados"
 export EMAIL_FROM_NAME="MB Importados"
