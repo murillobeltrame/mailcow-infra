@@ -102,7 +102,9 @@ export function sshConnectOptions(env, passwordOverride) {
     host: env.VPS_IP,
     port: Number(env.VPS_PORT || 22),
     username: env.VPS_USER || "root",
-    readyTimeout: 120000,
+    readyTimeout: Number(process.env.SSH_READY_TIMEOUT_MS || 180000),
+    keepaliveInterval: 10000,
+    keepaliveCountMax: 3,
   };
 
   if (process.env.VPS_SSH_KEY) {
@@ -112,4 +114,30 @@ export function sshConnectOptions(env, passwordOverride) {
   }
 
   return config;
+}
+
+/** Conecta com retentativas (runners GitHub podem levar ou falhar na 1ª tentativa). */
+export function connectSsh(env, handlers, { attempts = 3, delayMs = 15000 } = {}) {
+  let tryNum = 0;
+
+  const tryConnect = () => {
+    tryNum += 1;
+    const conn = new Client();
+    conn.on("ready", () => handlers.onReady(conn));
+    conn.on("error", (err) => {
+      if (tryNum < attempts) {
+        console.warn(`SSH tentativa ${tryNum}/${attempts} falhou: ${err.message}. Retry em ${delayMs / 1000}s...`);
+        setTimeout(tryConnect, delayMs);
+      } else {
+        console.error(`SSH falhou após ${attempts} tentativas: ${err.message}`);
+        console.error("Rode no VPS: bash fix-ssh-github-actions-vps.sh");
+        console.error("hPanel Hostinger: libere TCP 22 para 0.0.0.0/0");
+        handlers.onError?.(err);
+        process.exit(1);
+      }
+    });
+    conn.connect(sshConnectOptions(env));
+  };
+
+  tryConnect();
 }

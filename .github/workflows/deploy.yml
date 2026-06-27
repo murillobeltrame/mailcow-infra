@@ -87,6 +87,19 @@ jobs:
             echo "command=branding" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Preflight TCP 22
+        run: |
+          for i in 1 2 3; do
+            if timeout 10 bash -c "echo >/dev/tcp/${{ secrets.VPS_IP }}/22" 2>/dev/null; then
+              echo "Porta 22 acessível"
+              exit 0
+            fi
+            echo "Tentativa $i: porta 22 indisponível, aguardando..."
+            sleep 10
+          done
+          echo "::warning::Porta 22 bloqueada do runner GitHub — libere no hPanel Hostinger"
+          exit 0
+
       - name: Run deploy command
         working-directory: deploy
         run: node deploy.mjs "${{ steps.cmd.outputs.command }}"

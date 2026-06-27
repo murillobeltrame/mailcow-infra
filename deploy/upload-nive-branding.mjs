@@ -2,7 +2,7 @@ import { Client } from "ssh2";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnv, requireGithubActions, sshConnectOptions } from "./lib/env.mjs";
+import { loadEnv, requireGithubActions, connectSsh } from "./lib/env.mjs";
 
 requireGithubActions();
 
@@ -20,11 +20,10 @@ const files = readdirSync(brandingDir).filter((f) => !f.startsWith("."));
 
 function connect() {
   return new Promise((resolve, reject) => {
-    const conn = new Client();
-    conn
-      .on("ready", () => resolve(conn))
-      .on("error", reject)
-      .connect(sshConnectOptions(env));
+    connectSsh(env, {
+      onReady: (conn) => resolve(conn),
+      onError: reject,
+    });
   });
 }
 
