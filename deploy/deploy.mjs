@@ -1,29 +1,28 @@
 #!/usr/bin/env node
 /**
- * CLI de deploy — Mailcow Nive Mail
+ * CLI — Mailcow Nive Mail
  *
- * Uso:
- *   node deploy.mjs <comando>
- *   node deploy.mjs help
- *
- * Deploy no VPS: somente via GitHub Actions (commit + push).
- * Local: init, help, sync-github-secrets.mjs
+ * Dois fluxos:
+ *   • SSH local (deploy.mjs) — configuração, DNS, caixas, validação (rápido)
+ *   • GitHub Actions — branding/update/full quando o código do repo muda
  */
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnv, requireGithubActions, requireSshAuth } from "./lib/env.mjs";
+import { loadEnv, requireDeployPipeline, requireSshAuth } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ENV_PATH = join(__dir, ".env.deploy");
 const ENV_EXAMPLE = join(__dir, ".env.deploy.example");
 
+/** Release: código versionado → preferir CI */
+const PIPELINE_COMMANDS = new Set(["branding", "update", "full"]);
+
 function getEnv() {
   if (!existsSync(ENV_PATH) && !process.env.VPS_SSH_PASS && !process.env.VPS_SSH_KEY) {
     console.error("Arquivo deploy/.env.deploy não encontrado.");
     console.error("Execute: node deploy.mjs init");
-    console.error("Ou configure os Secrets no GitHub Actions.");
     process.exit(1);
   }
   const env = loadEnv(ENV_PATH);
@@ -40,18 +39,18 @@ function runNode(script, args = [], env = {}) {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
-function runRemote() {
-  requireGithubActions();
+/** SSH local — configuração e operação (sem exigir Actions). */
+function runSsh(scriptName, env) {
+  runNode("_ssh-run.mjs", [scriptName, ENV_PATH], env);
 }
 
-function runScript(scriptName, env) {
-  runRemote();
-  runNode("_ssh-deploy.mjs", [scriptName, ENV_PATH], env);
-}
-
-function runBranding(env) {
-  runRemote();
+function runBranding(env, { local = false } = {}) {
+  if (!local) requireDeployPipeline("branding");
   runNode("upload-nive-branding.mjs", [], env);
+}
+
+function maybePipeline(cmd) {
+  if (PIPELINE_COMMANDS.has(cmd)) requireDeployPipeline(cmd);
 }
 
 const commands = {
@@ -64,21 +63,29 @@ const commands = {
     }
     console.log("\nGere senhas e preencha o arquivo:\n");
     runNode("generate-secrets.mjs");
-    console.log("\nEdite deploy/.env.deploy (VPS_SSH_PASS, Cloudflare, etc.) antes do setup.");
+    console.log("\nEdite deploy/.env.deploy (VPS_SSH_PASS, Cloudflare, etc.)");
+  },
+
+  /** SSH genérico: node deploy.mjs ssh fix-mail-vps.sh */
+  ssh() {
+    const script = process.argv[3];
+    if (!script) {
+      console.error("Uso: node deploy.mjs ssh <script.sh>");
+      process.exit(1);
+    }
+    runSsh(script, getEnv());
   },
 
   setup() {
-    runScript("setup-mailcow.sh", getEnv());
+    runSsh("setup-mailcow.sh", getEnv());
   },
 
   dns() {
-    runRemote();
     getEnv();
     runNode("configure-dns.mjs");
   },
 
   "dns-dkim"() {
-    runRemote();
     getEnv();
     runNode("configure-dns.mjs", ["--dkim"]);
   },
@@ -87,80 +94,88 @@ const commands = {
     runBranding(getEnv());
   },
 
+  /** Preview local de logo/CSS (sem commit). Produção: use `branding` via Actions. */
+  "branding-local"() {
+    runBranding(getEnv(), { local: true });
+  },
+
   tune() {
-    runScript("tune-performance.sh", getEnv());
+    runSsh("tune-performance.sh", getEnv());
   },
 
   "disable-sogo"() {
-    runScript("disable-sogo.sh", getEnv());
+    runSsh("disable-sogo.sh", getEnv());
   },
 
   bootstrap() {
-    runScript("bootstrap-all-domains.sh", getEnv());
+    runSsh("bootstrap-all-domains-db.sh", getEnv());
+    runSsh("bootstrap-all-domains.sh", getEnv());
   },
 
   "migrate-email"() {
     const env = getEnv();
-    runScript("sync-api-key.sh", env);
-    runScript("bootstrap-all-domains-db.sh", env);
-    runScript("bootstrap-all-domains.sh", env);
-    runScript("create-mailboxes.sh", env);
-    runScript("reset-mailbox-passwords.sh", env);
+    runSsh("sync-api-key.sh", env);
+    runSsh("bootstrap-all-domains-db.sh", env);
+    runSsh("bootstrap-all-domains.sh", env);
+    runSsh("create-mailboxes.sh", env);
+    runSsh("reset-mailbox-passwords.sh", env);
     runNode("migrate-email-dns.mjs");
     runNode("migrate-email-dns.mjs", ["--dkim"]);
-    runScript("verify-mail.sh", env);
-    runScript("validate-mailcow.sh", env);
+    runSsh("verify-mail.sh", env);
+    runSsh("validate-mailcow.sh", env);
   },
 
   "reset-admin"() {
-    runScript("reset-admin-password.sh", getEnv());
+    runSsh("reset-admin-password.sh", getEnv());
   },
 
   ssl() {
-    runScript("renew-ssl.sh", getEnv());
+    runSsh("renew-ssl.sh", getEnv());
   },
 
   "ssl-fix"() {
-    runScript("fix-ssl.sh", getEnv());
+    runSsh("fix-ssl.sh", getEnv());
   },
 
   update() {
-    runScript("update-mailcow.sh", getEnv());
+    maybePipeline("update");
+    const env = getEnv();
+    runSsh("update-mailcow.sh", env);
     console.log("\nReaplicando branding Nive Mail...");
-    runBranding(getEnv());
+    runBranding(env, { local: true });
   },
 
   validate() {
-    runScript("validate-mailcow.sh", getEnv());
+    runSsh("validate-mailcow.sh", getEnv());
   },
 
   "test-api"() {
-    runScript("test-api.sh", getEnv());
+    runSsh("test-api.sh", getEnv());
   },
 
-  /** Instalação completa: setup → DNS → aguarda → DKIM → branding → tune → validate */
   async full() {
+    requireDeployPipeline("full");
     const env = getEnv();
     const waitSec = Number(process.env.DEPLOY_DKIM_WAIT_SEC || 120);
 
     console.log("==> 1/5 setup Mailcow");
-    runScript("setup-mailcow.sh", env);
+    runSsh("setup-mailcow.sh", env);
 
     console.log("\n==> 2/5 DNS (A, MX, SPF, DMARC)");
     runNode("configure-dns.mjs");
 
-    console.log(`\n==> Aguardando ${waitSec}s para o Mailcow subir e gerar DKIM...`);
+    console.log(`\n==> Aguardando ${waitSec}s para DKIM...`);
     await new Promise((r) => setTimeout(r, waitSec * 1000));
 
     console.log("\n==> 3/5 DNS DKIM");
     runNode("configure-dns.mjs", ["--dkim"]);
 
     console.log("\n==> 4/5 branding + performance");
-    runBranding(env);
-    runScript("tune-performance.sh", env);
+    runBranding(env, { local: true });
+    runSsh("tune-performance.sh", env);
 
     console.log("\n==> 5/5 validação");
-    runScript("validate-mailcow.sh", env);
+    runSsh("validate-mailcow.sh", env);
 
     console.log(
       "\nDeploy completo. Painel: https://" + (env.MAILCOW_HOSTNAME || "mail.nivesistemas.com.br") + "/admin",
@@ -171,26 +186,27 @@ const commands = {
     console.log(`
 Mailcow Nive Mail — deploy
 
-  node deploy.mjs init          Cria .env.deploy e gera senhas sugeridas
-  node deploy.mjs full          Instalação completa (aguarda DKIM automaticamente)
-  node deploy.mjs setup         Instala/atualiza Mailcow no VPS
-  node deploy.mjs dns           Cloudflare: A, MX, SPF, DMARC
-  node deploy.mjs dns-dkim      Cloudflare: + DKIM (Mailcow já rodando)
-  node deploy.mjs branding      Logo e CSS Nive Mail
-  node deploy.mjs update        git pull Mailcow + reaplica branding
-  node deploy.mjs validate      Health check (portas, HTTPS, DKIM)
-  node deploy.mjs tune          Swap + otimizações VPS
-  node deploy.mjs disable-sogo  Desativa SOGo (webmail)
-  node deploy.mjs bootstrap     Cria domínio inicial no banco
-  node deploy.mjs migrate-email Migra DNS Zoho → Nive Mail (ambos domínios)
-  node deploy.mjs reset-admin   Reset senha admin (MAILCOW_PASS)
-  node deploy.mjs ssl           Renova Let's Encrypt
-  node deploy.mjs ssl-fix       Corrige certificado HTTPS
-  node deploy.mjs test-api      Testa API Mailcow
-  node deploy.mjs help          Esta ajuda
+── SSH local (config / operação, rápido) ──
+  node deploy.mjs ssh <script.sh>   Roda script no VPS via SSH
+  node deploy.mjs validate          Health check
+  node deploy.mjs dns               Cloudflare MX/SPF/DMARC
+  node deploy.mjs dns-dkim          + DKIM
+  node deploy.mjs migrate-email     Migração de domínios/e-mail
+  node deploy.mjs ssl-fix           Corrige HTTPS
+  node deploy.mjs test-api          Testa API Mailcow
+  node deploy.mjs branding-local    Preview logo/CSS (dev, sem commit)
 
-Deploy VPS: commit + push → GitHub Actions (não rode localmente)
-Docs:       deploy/README.md
+── GitHub Actions (código do repo) ──
+  git push                          branding/ ou deploy/ → Actions
+  node deploy.mjs branding          Bloqueado local — use push ou workflow
+  node deploy.mjs update            Mailcow upstream + branding (CI)
+  node deploy.mjs full              Instalação completa (CI)
+
+── Setup ──
+  node deploy.mjs init              Cria .env.deploy
+  node sync-github-secrets.mjs      Secrets → GitHub
+
+Docs: deploy/README.md
 `);
   },
 };

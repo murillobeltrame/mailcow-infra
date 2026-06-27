@@ -7,13 +7,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "ssh2";
-import { loadEnv, requireGithubActions, sshConnectOptions } from "./lib/env.mjs";
+import { loadEnv, sshConnectOptions } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const withDkim = process.argv.includes("--dkim");
 const envPath = join(__dir, ".env.deploy");
-
-requireGithubActions();
 
 async function cfApi(token, method, path, body) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {

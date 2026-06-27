@@ -1,8 +1,7 @@
-import { Client } from "ssh2";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnv, sshConnectOptions } from "./lib/env.mjs";
+import { loadEnv, connectSsh } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const scriptName = process.argv[2];
@@ -32,9 +31,8 @@ const envExports = existsSync(envPath) ? parseEnvExports(readFileSync(envPath, "
 const remote = `/tmp/mailcow-ssh-${Date.now()}.sh`;
 const wrapper = `${envExports}\n${script}`.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
-const conn = new Client();
-conn
-  .on("ready", () => {
+connectSsh(env, {
+  onReady: (conn) => {
     conn.sftp((err, sftp) => {
       if (err) throw err;
       sftp.writeFile(remote, wrapper, { mode: 0o755 }, (err2) => {
@@ -47,9 +45,5 @@ conn
         });
       });
     });
-  })
-  .on("error", (e) => {
-    console.error(e.message);
-    process.exit(1);
-  })
-  .connect(sshConnectOptions(env));
+  },
+});

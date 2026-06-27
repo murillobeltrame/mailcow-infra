@@ -19,17 +19,15 @@ Repositório de deploy e operação do **Nive Mail** (Mailcow self-hosted) no VP
 
 **PTR/rDNS (manual no hPanel):** `2.25.181.76` → `mail.nivesistemas.com.br`
 
-## Deploy (GitHub only)
+## Dois fluxos de deploy
 
-**Não faça deploy direto no VPS.** O fluxo é sempre:
+| | SSH local | GitHub Actions |
+|---|-----------|----------------|
+| **Para quê** | Configuração, DNS, caixas, validação, fixes | Código versionado (branding, scripts) |
+| **Velocidade** | Imediato | Após commit + push |
+| **Exemplo** | `node deploy.mjs validate` | `git push origin master` |
 
-```bash
-git add .
-git commit -m "sua alteração"
-git push origin master
-```
-
-O **GitHub Actions** aplica no servidor automaticamente quando há push em `branding/` ou `deploy/`.
+O pipeline de Actions fica **sempre preparado** — mudanças em `branding/` ou `deploy/` disparam deploy automaticamente. Para operação e desenvolvimento, prefira SSH local.
 
 Documentação completa: **[deploy/README.md](deploy/README.md)**
 
@@ -43,15 +41,16 @@ node deploy.mjs init
 node sync-github-secrets.mjs   # copia secrets para o GitHub
 ```
 
-### Operações no VPS
+### Operações comuns
 
 | Objetivo | Como fazer |
 |----------|------------|
-| Logo, CSS, scripts | `git push` (automático) |
+| Health check, DNS, migração | `node deploy.mjs validate` / `dns` / `migrate-email` |
+| Script no VPS | `node deploy.mjs ssh <script.sh>` |
+| Preview logo (sem commit) | `node deploy.mjs branding-local` |
+| Logo, CSS, scripts no repo | `git push` → Actions |
 | Atualizar Mailcow | Actions → **Deploy Nive Mail** → `update` |
-| DNS / DKIM | Actions → comando `dns` ou `dns-dkim` |
 | VPS novo | Actions → comando `full` |
-| Health check | Actions → comando `validate` |
 
 Ou via CLI: `gh workflow run "Deploy Nive Mail" -f command=branding`
 
@@ -73,9 +72,9 @@ Registros de e-mail em **DNS only** (nuvem cinza) no Cloudflare.
 
 ```
 mailcow-infra/
-  .github/workflows/deploy.yml   # CI/CD — único caminho para o VPS
+  .github/workflows/deploy.yml   # CI/CD — release de código
   branding/                      # Logo + CSS Nive Mail
-  deploy/                        # Scripts (executados pelo Actions)
+  deploy/                        # Scripts (SSH local + Actions)
 ```
 
 Mailcow upstream: https://github.com/mailcow/mailcow-dockerized

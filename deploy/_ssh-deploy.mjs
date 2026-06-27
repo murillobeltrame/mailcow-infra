@@ -1,10 +1,7 @@
-import { Client } from "ssh2";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnv, requireGithubActions, connectSsh } from "./lib/env.mjs";
-
-requireGithubActions();
+import { loadEnv, connectSsh } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const scriptName = process.argv[2];

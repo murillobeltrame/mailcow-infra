@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { Client } from "ssh2";
 
 /** Variáveis suportadas em .env.deploy e nos Secrets do GitHub. */
 export const ENV_KEYS = [
@@ -78,23 +79,37 @@ export function requireSshAuth(env) {
   }
 }
 
-/** Deploy no VPS só via GitHub Actions, salvo emergência explícita. */
-export function requireGithubActions() {
-  if (process.env.GITHUB_ACTIONS === "true") return;
+export function isCiEnvironment() {
+  return process.env.GITHUB_ACTIONS === "true";
+}
+
+/**
+ * Comandos de release (código/branding no repo) — preferir GitHub Actions.
+ * Configuração e operação usam SSH local (deploy.mjs sem bloqueio).
+ */
+export function requireDeployPipeline(command = "deploy") {
+  if (isCiEnvironment()) return;
   if (process.env.ALLOW_LOCAL_DEPLOY === "1") {
-    console.warn("AVISO: ALLOW_LOCAL_DEPLOY=1 — deploy local (use só em emergência).");
+    console.warn(`AVISO: ALLOW_LOCAL_DEPLOY=1 — ${command} local (equivalente ao Actions).`);
     return;
   }
-  console.error("Deploy no VPS bloqueado localmente.");
+  console.error(`O comando "${command}" publica código do repositório — use GitHub Actions.`);
   console.error("");
-  console.error("Fluxo padrão:");
-  console.error("  1. git add / commit");
-  console.error("  2. git push origin master");
-  console.error("  3. GitHub Actions aplica no VPS");
+  console.error("  git add / commit / push   → Actions aplica no VPS");
+  console.error("  gh workflow run \"Deploy Nive Mail\" -f command=" + command);
   console.error("");
-  console.error("Manual: Actions → Deploy Nive Mail → Run workflow");
-  console.error("Emergência: ALLOW_LOCAL_DEPLOY=1 node deploy.mjs <cmd>");
+  console.error("Desenvolvimento rápido (sem commit):");
+  console.error("  node deploy.mjs branding-local   # testa logo/CSS via SSH");
+  console.error("  node deploy.mjs ssh <script>   # configuração no VPS");
+  console.error("  node deploy.mjs validate       # health check");
+  console.error("");
+  console.error("Emergência: ALLOW_LOCAL_DEPLOY=1 node deploy.mjs " + command);
   process.exit(1);
+}
+
+/** @deprecated use requireDeployPipeline */
+export function requireGithubActions() {
+  requireDeployPipeline("deploy");
 }
 
 export function sshConnectOptions(env, passwordOverride) {

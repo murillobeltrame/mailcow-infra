@@ -1,16 +1,57 @@
 # Deploy — Nive Mail
 
-Deploy **somente via GitHub Actions**. Scripts locais que tocam o VPS estão bloqueados de propósito.
+Dois fluxos complementares:
 
-## Fluxo padrão
+| Fluxo | Quando usar | Como |
+|-------|-------------|------|
+| **SSH local** | Configuração, DNS, caixas, validação, fixes rápidos | `node deploy.mjs …` na sua máquina |
+| **GitHub Actions** | Código versionado (branding, scripts, melhorias) | `git push` ou workflow manual |
 
+O deploy via Actions fica **sempre preparado** — qualquer mudança em `branding/` ou `deploy/` dispara o pipeline. Para operação do dia a dia, use SSH local: é mais rápido e não exige commit.
+
+---
+
+## SSH local (desenvolvimento e configuração)
+
+Requisitos: `deploy/.env.deploy` preenchido (veja [Setup inicial](#setup-inicial-uma-vez)).
+
+```powershell
+cd deploy
+
+# Health check
+node deploy.mjs validate
+
+# DNS Cloudflare
+node deploy.mjs dns
+node deploy.mjs dns-dkim
+
+# Migração de e-mail (domínios + caixas + DNS)
+node deploy.mjs migrate-email
+
+# Script arbitrário no VPS
+node deploy.mjs ssh fix-mail-vps-standalone.sh
+node deploy.mjs ssh add-domain-vps.sh
+
+# Preview de logo/CSS sem commit (dev)
+node deploy.mjs branding-local
+
+# SSL, API, bootstrap…
+node deploy.mjs ssl-fix
+node deploy.mjs test-api
+node deploy.mjs bootstrap
 ```
-editar arquivos → git commit → git push → GitHub Actions → VPS
-```
+
+Comandos locais **não** exigem GitHub Actions. Usam `_ssh-run.mjs` com retry de conexão SSH.
+
+---
+
+## GitHub Actions (código e release)
+
+Use quando alterar arquivos versionados no repositório:
 
 ```bash
-git add branding/nive-logo.svg
-git commit -m "Atualiza logo Nive Mail"
+git add branding/nive-logo.svg deploy/fix-mail-vps.sh
+git commit -m "Atualiza logo e script de fix"
 git push origin master
 ```
 
@@ -18,30 +59,54 @@ Acompanhe: https://github.com/murillobeltrame/mailcow-infra/actions
 
 Push em `branding/` ou `deploy/` dispara **`branding`** automaticamente.
 
----
+### Comandos bloqueados localmente
 
-## O que NÃO fazer
+Estes publicam código do repo — o CLI orienta usar Actions:
 
-```powershell
-# ❌ bloqueado localmente
-node deploy.mjs branding
-node upload-nive-branding.mjs
-```
+| Comando | Motivo |
+|---------|--------|
+| `branding` | Logo/CSS versionados |
+| `update` | Mailcow upstream + branding |
+| `full` | Instalação completa |
 
-Use **commit + push** ou o workflow manual no GitHub.
+Alternativas locais:
 
-Emergência (só se Actions estiver fora):
+- **`branding-local`** — mesmo efeito do branding, sem commit (só dev/preview)
+- **`ALLOW_LOCAL_DEPLOY=1`** — emergência se Actions estiver indisponível
 
 ```powershell
 $env:ALLOW_LOCAL_DEPLOY="1"
 node deploy.mjs branding
+node deploy.mjs update
 ```
+
+### Workflow manual
+
+**Site:** Actions → **Deploy Nive Mail** → Run workflow → escolha o comando.
+
+**CLI:**
+
+```powershell
+gh workflow run "Deploy Nive Mail" -f command=update
+gh workflow run "Deploy Nive Mail" -f command=validate
+gh workflow run "Deploy Nive Mail" -f command=dns-dkim
+```
+
+### Comandos no Actions
+
+| Comando | Uso |
+|---------|-----|
+| `branding` | Logo + CSS *(padrão no push)* |
+| `update` | Mailcow upstream + branding |
+| `dns` / `dns-dkim` | Cloudflare |
+| `validate` | Health check |
+| `migrate-email` | Migração completa |
+| `full` | Instalação VPS novo |
+| `setup` / `tune` / `ssl` / … | Operações SSH |
 
 ---
 
-## Setup inicial (uma vez, local)
-
-Só estes comandos rodam na sua máquina:
+## Setup inicial (uma vez)
 
 ```powershell
 cd deploy
@@ -67,66 +132,40 @@ Opcionais com padrão: `VPS_IP`, `MAILCOW_HOSTNAME`, `MAIL_DOMAIN`, etc. — vej
 
 ---
 
-## GitHub Actions
-
-Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
-
-### Manual
-
-**Site:** Actions → **Deploy Nive Mail** → Run workflow → escolha o comando.
-
-**CLI:**
-
-```powershell
-gh workflow run "Deploy Nive Mail" -f command=update
-gh workflow run "Deploy Nive Mail" -f command=validate
-gh workflow run "Deploy Nive Mail" -f command=dns-dkim
-```
-
-### Comandos
-
-| Comando | Uso |
-|---------|-----|
-| `branding` | Logo + CSS *(padrão no push)* |
-| `update` | Mailcow upstream + branding |
-| `dns` | A, MX, SPF, DMARC |
-| `dns-dkim` | + DKIM |
-| `validate` | Health check |
-| `full` | Instalação VPS novo |
-| `setup` | Instala Mailcow |
-| `tune` | Performance + swap |
-| `ssl` / `ssl-fix` | HTTPS |
-| `reset-admin` | Reset senha admin |
-
----
-
 ## Cenários
 
-| Objetivo | Ação |
-|----------|------|
-| Mudou logo/CSS | `git push` |
-| Mudou script de deploy | `git push` (ou workflow `branding`/`update`) |
-| Atualizar Mailcow | workflow `update` |
-| Só DNS | workflow `dns` / `dns-dkim` |
+| Objetivo | Ação recomendada |
+|----------|------------------|
+| Testar fix no VPS agora | `node deploy.mjs ssh fix-….sh` |
+| Ajustar DNS / DKIM | `node deploy.mjs dns-dkim` |
+| Validar produção | `node deploy.mjs validate` |
+| Mudou logo/CSS no repo | `git push` → Actions |
+| Mudou script de deploy | `git push` (ou workflow `update`) |
+| Preview logo antes do commit | `node deploy.mjs branding-local` |
+| Atualizar Mailcow upstream | workflow `update` |
 | VPS novo | workflow `full` |
 
 ---
 
 ## Solução de problemas
 
+**SSH local OK, Actions timeout na porta 22:** libere TCP 22 no hPanel Hostinger para runners GitHub; rode `fix-ssh-github-actions-vps.sh` no VPS.
+
 **Workflow falhou nos secrets:** rode `node sync-github-secrets.mjs` e tente de novo.
 
-**Branding sumiu após update:** workflow `update` ou `branding`.
+**Branding sumiu após update:** workflow `update` ou `branding-local` / push.
 
 **PTR/rDNS:** manual no hPanel — `2.25.181.76` → `mail.nivesistemas.com.br`
 
 ---
 
-## Scripts (executados pelo Actions)
+## Scripts
 
 | Arquivo | Função |
 |---------|--------|
-| `deploy.mjs` | CLI (só no CI) |
+| `deploy.mjs` | CLI (SSH local + gate de release) |
+| `_ssh-run.mjs` | SSH local sem bloqueio CI |
+| `_ssh-deploy.mjs` | Legado — preferir `_ssh-run.mjs` |
 | `ci-write-env.mjs` | Monta `.env.deploy` no Actions |
 | `sync-github-secrets.mjs` | Local → GitHub Secrets |
 | `upload-nive-branding.mjs` | Branding no VPS |

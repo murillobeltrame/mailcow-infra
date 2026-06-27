@@ -1,10 +1,7 @@
-import { Client } from "ssh2";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnv, requireGithubActions, connectSsh } from "./lib/env.mjs";
-
-requireGithubActions();
+import { loadEnv, connectSsh } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const envPath = join(__dir, ".env.deploy");

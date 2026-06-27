@@ -1,19 +1,22 @@
 # Deploy Mailcow — passo a passo
 
+> Preferir `node deploy.mjs …` (SSH local). Use GitHub Actions (`full`) para instalação versionada em VPS novo.
+
 ## 1. Secrets locais
 
 ```powershell
 cd deploy
-copy .env.deploy.example .env.deploy
+node deploy.mjs init
 node generate-secrets.mjs
-# preencha VPS_SSH_PASS e CLOUDFLARE_API_TOKEN
+# preencha VPS_SSH_PASS e CLOUDFLARE_API_TOKEN em .env.deploy
 ```
 
 ## 2. Instalar no VPS
 
 ```powershell
 npm install
-node _ssh-deploy.mjs "<senha-ssh>" setup-mailcow.sh .env.deploy
+node deploy.mjs setup
+# ou, via Actions: gh workflow run "Deploy Nive Mail" -f command=full
 ```
 
 O script:
@@ -26,53 +29,44 @@ Tempo estimado: **10–20 minutos** (download de imagens).
 ## 3. DNS Cloudflare
 
 ```powershell
-node configure-dns.mjs
+node deploy.mjs dns
 # aguarde Mailcow gerar DKIM
-node configure-dns.mjs --dkim
+node deploy.mjs dns-dkim
 ```
-
-Registros criados em `corelycommerce.com.br`:
-
-| Tipo | Nome | Valor |
-|------|------|-------|
-| A | mail | 2.25.181.76 (DNS only) |
-| MX | @ | mail.corelycommerce.com.br (prio 10) |
-| TXT | @ | SPF |
-| TXT | _dmarc | DMARC |
-| TXT | dkim._domainkey | DKIM (com --dkim) |
 
 ## 4. PTR/rDNS (manual — Hostinger hPanel)
 
 Em **VPS → Configurações → Reverse DNS**:
 
 ```
-2.25.181.76 → mail.corelycommerce.com.br
+2.25.181.76 → mail.nivesistemas.com.br
 ```
 
 Sem PTR, Gmail/Outlook tendem a rejeitar ou marcar como spam.
 
 ## 5. Primeiro login
 
-1. Acesse https://mail.corelycommerce.com.br/admin
+1. Acesse https://mail.nivesistemas.com.br/admin
 2. Login: `admin` / senha de `MAILCOW_PASS`
-3. **Configuration → Mail setup → Domains** → adicionar `corelycommerce.com.br`
+3. **Configuration → Mail setup → Domains** → adicionar domínios
 4. **Configuration → Mail setup → Mailboxes** → criar caixas
 
 ## 6. Validar
 
 ```powershell
-node _ssh-deploy.mjs "<senha-ssh>" validate-mailcow.sh .env.deploy
+node deploy.mjs validate
 ```
 
 Teste externo:
 
 ```bash
-dig MX corelycommerce.com.br +short
-openssl s_client -connect mail.corelycommerce.com.br:993 -brief
+dig MX nivesistemas.com.br +short
+openssl s_client -connect mail.nivesistemas.com.br:993 -brief
 ```
 
-## Domínio adicional (stepgosistemas.com.br)
+## Domínio adicional
 
-1. Adicionar domínio no painel Mailcow
-2. Criar zona/registros na Cloudflare de `stepgosistemas.com.br`
-3. Repetir A/MX/SPF/DKIM/DMARC para esse domínio
+```powershell
+node deploy.mjs ssh add-domain-vps.sh
+node deploy.mjs dns-dkim
+```
