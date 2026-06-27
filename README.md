@@ -2,137 +2,77 @@
 
 Repositório de deploy e operação do **Nive Mail** (Mailcow self-hosted) no VPS Hostinger.
 
-Repositório: https://github.com/murillobeltrame/mailcow-infra
+- Repositório: https://github.com/murillobeltrame/mailcow-infra
+- Painel: https://mail.nivesistemas.com.br/admin
+- Actions: https://github.com/murillobeltrame/mailcow-infra/actions
 
 ## Produção
 
 | Item | Valor |
 |------|--------|
-| Painel | https://mail.nivesistemas.com.br/admin |
 | Hostname SMTP/IMAP | `mail.nivesistemas.com.br` |
 | Domínio principal | `nivesistemas.com.br` |
-| Domínio adicional | `corelycommerce.com.br` (mesmo servidor) |
-| Webmail SOGo | Desativado — use Thunderbird, Outlook ou app mobile (IMAP) |
-| Login admin | usuário `admin` + senha no secret `MAILCOW_PASS` |
+| Domínio adicional | `corelycommerce.com.br` |
+| Webmail SOGo | Desativado — use Thunderbird, Outlook ou app mobile |
+| Login admin | `admin` + senha em `MAILCOW_PASS` (secret GitHub) |
+| Nome do painel | **Nive Mail** |
 
-**PTR/rDNS (manual no hPanel Hostinger):** `2.25.181.76` → `mail.nivesistemas.com.br`
+**PTR/rDNS (manual no hPanel):** `2.25.181.76` → `mail.nivesistemas.com.br`
 
----
+## Deploy
 
-## Deploy pelo GitHub (recomendado)
+O deploy é feito pelo **GitHub Actions**. Documentação completa: **[deploy/README.md](deploy/README.md)**
 
-O deploy roda via **GitHub Actions**. Ao fazer push em `branding/` ou `deploy/`, o workflow reaplica o **branding Nive Mail** automaticamente.
-
-### 1. Configurar Secrets
-
-No GitHub: **Settings → Secrets and variables → Actions → New repository secret**
-
-| Secret | Obrigatório | Descrição |
-|--------|-------------|-----------|
-| `VPS_SSH_PASS` | sim* | Senha SSH do root no VPS |
-| `VPS_SSH_KEY` | sim* | Chave SSH privada (alternativa à senha) |
-| `MAILCOW_PASS` | sim | Senha admin Mailcow |
-| `MAILCOW_API_KEY` | sim | API key Mailcow |
-| `CLOUDFLARE_API_TOKEN` | sim | Token Cloudflare (DNS) |
-| `CLOUDFLARE_ZONE_ID` | sim | Zona `nivesistemas.com.br` |
-| `VPS_IP` | não | Padrão: `2.25.181.76` |
-| `VPS_USER` | não | Padrão: `root` |
-| `MAILCOW_HOSTNAME` | não | Padrão: `mail.nivesistemas.com.br` |
-| `MAIL_DOMAIN` | não | Padrão: `nivesistemas.com.br` |
-| `EXTRA_MAIL_DOMAIN` | não | Ex.: `corelycommerce.com.br` |
-| `EXTRA_CLOUDFLARE_ZONE_ID` | não | Zona do domínio extra |
-| `CLOUDFLARE_ACCOUNT_ID` | não | Conta Cloudflare |
-| `MAILCOW_IPV4_NETWORK` | não | Padrão: `172.23.1` |
-| `MAILCOW_TZ` | não | Padrão: `America/Sao_Paulo` |
-
-\* Use `VPS_SSH_PASS` **ou** `VPS_SSH_KEY` (chave privada completa, incluindo `-----BEGIN...`).
-
-Valores de referência estão em `deploy/.env.deploy.example`.
-
-### 2. Executar deploy
-
-**Automático** — push na branch `master`/`main` alterando `branding/` ou `deploy/`:
-
-```bash
-git push origin master
-```
-
-**Manual** — GitHub → **Actions** → **Deploy Nive Mail** → **Run workflow** → escolha o comando:
-
-| Comando | Uso |
-|---------|-----|
-| `branding` | Reaplica logo e CSS Nive Mail (padrão no push) |
-| `update` | Atualiza Mailcow upstream + branding |
-| `dns` | Cloudflare: A, MX, SPF, DMARC |
-| `dns-dkim` | Cloudflare: + DKIM |
-| `validate` | Health check |
-| `setup` | Instala Mailcow no VPS |
-| `full` | Instalação completa (VPS novo) |
-| `tune` | Swap + performance |
-| `ssl` / `ssl-fix` | Certificado HTTPS |
-| `reset-admin` | Reset senha admin |
-
-### 3. Variável opcional
-
-Em **Settings → Secrets and variables → Actions → Variables**:
-
-| Variable | Padrão | Descrição |
-|----------|--------|-----------|
-| `DEPLOY_DKIM_WAIT_SEC` | `120` | Espera antes do DKIM no comando `full` |
-
----
-
-## Deploy local (alternativo)
-
-Para testes na sua máquina:
+### Início rápido
 
 ```powershell
 cd deploy
 npm install
-node deploy.mjs init
+node deploy.mjs init              # cria .env.deploy
 # edite deploy/.env.deploy
-node deploy.mjs branding
+node sync-github-secrets.mjs      # envia secrets ao GitHub (requer gh auth login)
 ```
 
-> **Nunca commite** `deploy/.env.deploy`.
+Depois:
 
----
+- **Push** em `branding/` ou `deploy/` → reaplica branding automaticamente
+- **Manual:** Actions → **Deploy Nive Mail** → Run workflow
+- **CLI:** `gh workflow run "Deploy Nive Mail" -f command=branding`
+
+### Comandos mais usados (GitHub Actions ou local)
+
+| Comando | Descrição |
+|---------|-----------|
+| `branding` | Logo + CSS Nive Mail *(padrão no push)* |
+| `update` | Atualiza Mailcow + reaplica branding |
+| `full` | Instalação completa (VPS novo) |
+| `dns` / `dns-dkim` | DNS Cloudflare |
+| `validate` | Health check |
+
+Local: `node deploy.mjs <comando>` — veja `node deploy.mjs help`.
 
 ## Clientes de e-mail
 
-| Protocolo | Servidor | Porta |
-|-----------|----------|-------|
-| IMAP (SSL) | `mail.nivesistemas.com.br` | 993 |
-| SMTP (STARTTLS) | `mail.nivesistemas.com.br` | 587 |
-| SMTP (SSL) | `mail.nivesistemas.com.br` | 465 |
+| Protocolo | Porta |
+|-----------|-------|
+| IMAP (SSL) | 993 |
+| SMTP STARTTLS | 587 |
+| SMTP SSL | 465 |
 
-## DNS e Cloudflare
+Servidor: `mail.nivesistemas.com.br`
 
-- Registros de **e-mail** (`A`, `MX`, `SPF`, `DKIM`, `DMARC`) em **DNS only** (nuvem cinza).
-- Painel admin: HTTPS direto no VPS (Let's Encrypt via Mailcow).
+## DNS
 
-## Estrutura do repositório
+Registros de e-mail em **DNS only** (nuvem cinza) no Cloudflare.  
+HTTPS do painel: Let's Encrypt automático do Mailcow.
+
+## Estrutura
 
 ```
 mailcow-infra/
-  .github/workflows/deploy.yml   # CI/CD GitHub Actions
-  branding/                    # Logo SVG + CSS Nive Mail
-  deploy/
-    deploy.mjs                   # CLI de deploy
-    ci-write-env.mjs             # monta .env.deploy a partir dos secrets
-    lib/env.mjs                  # loader de config (local + CI)
-    .env.deploy.example
-    setup-mailcow.sh
-    update-mailcow.sh
-    validate-mailcow.sh
-    configure-dns.mjs
-    apply-nive-branding.sh
-    upload-nive-branding.mjs
-    ...
+  .github/workflows/deploy.yml   # CI/CD
+  branding/                      # Logo + CSS Nive Mail
+  deploy/                        # Scripts e CLI → deploy/README.md
 ```
 
 Mailcow upstream: https://github.com/mailcow/mailcow-dockerized
-
-## Identidade visual
-
-O painel exibe **Nive Mail**. Após updates do Mailcow, faça push em `branding/` ou rode o workflow com comando `branding`.

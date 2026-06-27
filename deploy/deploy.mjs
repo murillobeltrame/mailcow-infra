@@ -164,8 +164,10 @@ Mailcow Nive Mail — deploy
   node deploy.mjs ssl           Renova Let's Encrypt
   node deploy.mjs ssl-fix       Corrige certificado HTTPS
   node deploy.mjs test-api      Testa API Mailcow
+  node deploy.mjs help          Esta ajuda
 
 Config: deploy/.env.deploy (local) ou GitHub Actions Secrets (CI)
+Docs:   deploy/README.md
 `);
   },
 };

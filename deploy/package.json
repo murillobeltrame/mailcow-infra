@@ -11,7 +11,8 @@
     "branding": "node deploy.mjs branding",
     "update": "node deploy.mjs update",
     "validate": "node deploy.mjs validate",
-    "full": "node deploy.mjs full"
+    "full": "node deploy.mjs full",
+    "sync-secrets": "node sync-github-secrets.mjs"
   },
   "dependencies": {
     "ssh2": "^1.16.0"
