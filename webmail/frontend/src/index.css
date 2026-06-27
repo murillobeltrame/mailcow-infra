@@ -21,6 +21,9 @@
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 209 61% 34%;
+    --sidebar: 217 33% 17%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-muted: 215 20% 65%;
     --radius: 0.625rem;
   }
 
@@ -42,6 +45,9 @@
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 209 55% 48%;
+    --sidebar: 224 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-muted: 215 20% 65%;
   }
 
   * {
@@ -54,20 +60,63 @@
 }
 
 @layer components {
-  .surface-card {
-    @apply rounded-xl border bg-card shadow-card;
-    border-color: hsl(var(--border) / 0.8);
+  .panel {
+    @apply flex h-full min-h-0 flex-col bg-card;
+  }
+
+  .panel-header {
+    @apply shrink-0 border-b border-border/80 px-4 py-3;
+  }
+
+  .panel-body {
+    @apply min-h-0 flex-1 overflow-hidden;
+  }
+
+  .nav-item {
+    @apply flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent;
+  }
+
+  .nav-item-active {
+    @apply bg-primary/10 font-semibold text-primary;
+  }
+
+  .mail-row {
+    @apply flex w-full gap-3 border-b border-border/60 px-4 py-3 text-left transition-colors hover:bg-accent/50;
   }
 
   .mail-row-unread {
-    @apply font-semibold bg-primary/[0.04];
+    @apply bg-primary/5 font-medium;
   }
 
   .mail-row-selected {
-    @apply bg-primary/10 ring-1 ring-primary/20;
+    @apply border-l-2 border-l-primary bg-primary/10;
   }
 
-  .folder-active {
-    @apply bg-primary/10 font-semibold text-primary;
+  .mail-body {
+    @apply text-sm leading-relaxed text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .mail-body img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .mail-body a {
+    @apply text-primary underline underline-offset-2;
+  }
+
+  .mail-body table {
+    max-width: 100%;
+  }
+
+  .mail-body pre,
+  .mail-body code {
+    @apply overflow-x-auto rounded bg-muted px-1 py-0.5 text-xs;
+  }
+
+  .auth-sidebar {
+    background-color: hsl(var(--sidebar));
+    color: hsl(var(--sidebar-foreground));
   }
 }
