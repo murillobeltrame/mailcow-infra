@@ -6,13 +6,14 @@
  *   node deploy.mjs <comando>
  *   node deploy.mjs help
  *
- * Requer deploy/.env.deploy (copie de .env.deploy.example).
+ * Deploy no VPS: somente via GitHub Actions (commit + push).
+ * Local: init, help, sync-github-secrets.mjs
  */
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnv, requireSshAuth } from "./lib/env.mjs";
+import { loadEnv, requireGithubActions, requireSshAuth } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ENV_PATH = join(__dir, ".env.deploy");
@@ -39,11 +40,17 @@ function runNode(script, args = [], env = {}) {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
+function runRemote() {
+  requireGithubActions();
+}
+
 function runScript(scriptName, env) {
+  runRemote();
   runNode("_ssh-deploy.mjs", [scriptName, ENV_PATH], env);
 }
 
 function runBranding(env) {
+  runRemote();
   runNode("upload-nive-branding.mjs", [], env);
 }
 
@@ -65,11 +72,13 @@ const commands = {
   },
 
   dns() {
+    runRemote();
     getEnv();
     runNode("configure-dns.mjs");
   },
 
   "dns-dkim"() {
+    runRemote();
     getEnv();
     runNode("configure-dns.mjs", ["--dkim"]);
   },
@@ -166,8 +175,8 @@ Mailcow Nive Mail — deploy
   node deploy.mjs test-api      Testa API Mailcow
   node deploy.mjs help          Esta ajuda
 
-Config: deploy/.env.deploy (local) ou GitHub Actions Secrets (CI)
-Docs:   deploy/README.md
+Deploy VPS: commit + push → GitHub Actions (não rode localmente)
+Docs:       deploy/README.md
 `);
   },
 };

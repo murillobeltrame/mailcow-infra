@@ -78,6 +78,25 @@ export function requireSshAuth(env) {
   }
 }
 
+/** Deploy no VPS só via GitHub Actions, salvo emergência explícita. */
+export function requireGithubActions() {
+  if (process.env.GITHUB_ACTIONS === "true") return;
+  if (process.env.ALLOW_LOCAL_DEPLOY === "1") {
+    console.warn("AVISO: ALLOW_LOCAL_DEPLOY=1 — deploy local (use só em emergência).");
+    return;
+  }
+  console.error("Deploy no VPS bloqueado localmente.");
+  console.error("");
+  console.error("Fluxo padrão:");
+  console.error("  1. git add / commit");
+  console.error("  2. git push origin master");
+  console.error("  3. GitHub Actions aplica no VPS");
+  console.error("");
+  console.error("Manual: Actions → Deploy Nive Mail → Run workflow");
+  console.error("Emergência: ALLOW_LOCAL_DEPLOY=1 node deploy.mjs <cmd>");
+  process.exit(1);
+}
+
 export function sshConnectOptions(env, passwordOverride) {
   const config = {
     host: env.VPS_IP,

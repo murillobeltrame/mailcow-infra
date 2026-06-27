@@ -3,16 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "node deploy.mjs",
     "init": "node deploy.mjs init",
-    "setup": "node deploy.mjs setup",
-    "dns": "node deploy.mjs dns",
-    "dns:dkim": "node deploy.mjs dns-dkim",
-    "branding": "node deploy.mjs branding",
-    "update": "node deploy.mjs update",
-    "validate": "node deploy.mjs validate",
-    "full": "node deploy.mjs full",
-    "sync-secrets": "node sync-github-secrets.mjs"
+    "sync-secrets": "node sync-github-secrets.mjs",
+    "help": "node deploy.mjs help"
   },
   "dependencies": {
     "ssh2": "^1.16.0"
