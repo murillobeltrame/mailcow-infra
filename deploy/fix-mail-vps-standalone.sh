@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Rode DIRETO no VPS: curl -fsSL .../fix-mail-vps-standalone.sh | bash
+# Rode no VPS (NÃO use pipe — heredoc quebra com curl | bash):
+#   curl -fsSL -o /tmp/fix-mail.sh URL && bash /tmp/fix-mail.sh
 set -euo pipefail
 
 die() { echo "ERRO: $*" >&2; exit 1; }
@@ -28,19 +29,11 @@ if ! grep -q '^API_ALLOW_FROM=' mailcow.conf; then
   echo 'API_ALLOW_FROM=127.0.0.1,172.22.1.1,172.23.1.1' >> mailcow.conf
 fi
 
-echo "==> Docker mysql"
 docker compose ps mysql-mailcow --format '{{.Status}}' | grep -qi up || die "mysql-mailcow não está rodando"
 
-mysql_exec() {
-  docker compose exec -T mysql-mailcow mysql -umailcow -p"${DBPASS}" mailcow "$@"
-}
-
 echo "==> Sync API key"
-mysql_exec <<SQL
-DELETE FROM api;
-INSERT INTO api (api_key, active, allow_from, access)
-VALUES ('${KEY}', 1, '127.0.0.1,172.22.1.1,172.23.1.1', 'rw');
-SQL
+docker compose exec -T mysql-mailcow mysql -umailcow -p"${DBPASS}" mailcow \
+  -e "DELETE FROM api; INSERT INTO api (api_key, active, allow_from, access) VALUES ('${KEY}', 1, '127.0.0.1,172.22.1.1,172.23.1.1', 'rw');"
 
 echo "==> Teste API"
 API_OUT=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
@@ -51,26 +44,27 @@ echo "${API_OUT}" | grep -q '"version"' || die "API Mailcow falhou"
 
 echo ""
 echo "==> Caixas"
-mysql_exec -e "SELECT username, active FROM mailbox ORDER BY username;"
+docker compose exec -T mysql-mailcow mysql -umailcow -p"${DBPASS}" mailcow \
+  -e "SELECT username, active FROM mailbox ORDER BY username;"
 
 if [[ -n "${MAILCOW_PASS}" ]]; then
   echo ""
   echo "==> Reset senhas"
-  mapfile -t MAILBOXES < <(curl -sk "https://127.0.0.1/api/v1/get/mailbox/all" \
+  MB_JSON=$(curl -sk "https://127.0.0.1/api/v1/get/mailbox/all" \
     -H "Host: ${MAILCOW_HOSTNAME}" \
-    -H "X-API-Key: ${KEY}" | grep -o '"username": "[^"]*"' | cut -d'"' -f4)
-  for mb in "${MAILBOXES[@]}"; do
+    -H "X-API-Key: ${KEY}")
+  while IFS= read -r mb; do
     [[ -z "${mb}" ]] && continue
     echo "  ${mb}"
+    PAYLOAD=$(python3 -c "import json,sys; print(json.dumps({'items':[sys.argv[1]],'attr':{'password':sys.argv[2],'password2':sys.argv[2],'force_pw_update':'0'}}))" "${mb}" "${MAILCOW_PASS}")
     curl -sk -X POST "https://127.0.0.1/api/v1/edit/mailbox" \
       -H "Host: ${MAILCOW_HOSTNAME}" \
       -H "Content-Type: application/json" \
       -H "X-API-Key: ${KEY}" \
-      -d "$(python3 -c "import json,sys; print(json.dumps({'items':[sys.argv[1]],'attr':{'password':sys.argv[2],'password2':sys.argv[2],'force_pw_update':'0'}}))" "${mb}" "${MAILCOW_PASS}")" \
-      > /dev/null
-  done
+      -d "${PAYLOAD}" > /dev/null
+  done < <(echo "${MB_JSON}" | grep -o '"username": "[^"]*"' | cut -d'"' -f4)
 else
-  echo "AVISO: MAILCOW_PASS não está em mailcow.conf — senhas das caixas não alteradas."
+  echo "AVISO: MAILCOW_PASS ausente — senhas não alteradas."
 fi
 
 echo ""
@@ -85,39 +79,32 @@ sleep 5
 
 echo ""
 echo "==> Teste IMAP/SMTP"
-if [[ -z "${MAILCOW_PASS}" ]]; then
-  echo "Pulando teste (MAILCOW_PASS ausente)."
-else
+if [[ -n "${MAILCOW_PASS}" ]]; then
   export MAILCOW_PASS
-  python3 - <<'PY'
+  python3 -c "
 import imaplib, smtplib, os, sys
-pw = os.environ["MAILCOW_PASS"]
-accounts = [
-    "contato@nivesistemas.com.br",
-    "contato@corelycommerce.com.br",
-    "noreply@nivesistemas.com.br",
-    "noreply@corelycommerce.com.br",
-]
+pw = os.environ['MAILCOW_PASS']
+accounts = ['contato@nivesistemas.com.br','contato@corelycommerce.com.br','noreply@nivesistemas.com.br','noreply@corelycommerce.com.br']
 ok = True
 for user in accounts:
     try:
-        m = imaplib.IMAP4_SSL("127.0.0.1", 993)
+        m = imaplib.IMAP4_SSL('127.0.0.1', 993)
         m.login(user, pw)
         m.logout()
-        print(f"IMAP OK: {user}")
+        print(f'IMAP OK: {user}')
     except Exception as e:
         ok = False
-        print(f"IMAP FAIL: {user} — {e}")
+        print(f'IMAP FAIL: {user} — {e}')
 try:
-    s = smtplib.SMTP_SSL("127.0.0.1", 465, timeout=15)
+    s = smtplib.SMTP_SSL('127.0.0.1', 465, timeout=15)
     s.login(accounts[0], pw)
     s.quit()
-    print(f"SMTP OK: {accounts[0]} (465)")
+    print(f'SMTP OK: {accounts[0]} (465)')
 except Exception as e:
     ok = False
-    print(f"SMTP FAIL: {e}")
+    print(f'SMTP FAIL: {e}')
 sys.exit(0 if ok else 1)
-PY
+"
 fi
 
 echo ""
