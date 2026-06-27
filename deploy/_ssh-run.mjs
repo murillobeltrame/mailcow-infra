@@ -1,44 +1,55 @@
 import { Client } from "ssh2";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv, sshConnectOptions } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const envPath = join(__dir, ".env.deploy");
+const scriptName = process.argv[2];
+const envPath = process.argv[3] || join(__dir, ".env.deploy");
 
-/** Compat: _ssh-run.mjs "senha" "cmd"  ou  _ssh-run.mjs "cmd" */
-let cmd;
-let passwordOverride;
-if (process.argv[3]) {
-  passwordOverride = process.argv[2];
-  cmd = process.argv[3];
-} else {
-  cmd = process.argv[2];
-}
-
-if (!cmd) {
-  console.error("Uso: node _ssh-run.mjs \"comando remoto\"");
-  console.error("     node _ssh-run.mjs \"senha\" \"comando remoto\"  (legado)");
+if (!scriptName) {
+  console.error("Uso: node _ssh-run.mjs <script.sh> [.env.deploy]");
   process.exit(1);
 }
 
+const scriptPath = join(__dir, scriptName);
 const env = loadEnv(envPath);
+
+function parseEnvExports(text) {
+  const out = [];
+  for (const line of text.split("\n")) {
+    const clean = line.replace(/\r$/, "");
+    const m = clean.match(/^\s*([A-Z_][A-Z0-9_]*)=(.*)$/);
+    if (!m) continue;
+    out.push(`export ${m[1]}='${m[2].replace(/'/g, `'\\''`)}'`);
+  }
+  return out.join("\n");
+}
+
+const script = readFileSync(scriptPath, "utf8");
+const envExports = existsSync(envPath) ? parseEnvExports(readFileSync(envPath, "utf8")) : "";
+const remote = `/tmp/mailcow-ssh-${Date.now()}.sh`;
+const wrapper = `${envExports}\n${script}`.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
 const conn = new Client();
 conn
   .on("ready", () => {
-    conn.exec(cmd, { pty: true }, (err, stream) => {
-      if (err) {
-        console.error(err);
-        process.exit(1);
-      }
-      stream.on("close", (code) => process.exit(code ?? 0));
-      stream.pipe(process.stdout);
-      stream.stderr.pipe(process.stderr);
+    conn.sftp((err, sftp) => {
+      if (err) throw err;
+      sftp.writeFile(remote, wrapper, { mode: 0o755 }, (err2) => {
+        if (err2) throw err2;
+        conn.exec(`bash ${remote}; rm -f ${remote}`, (err3, stream) => {
+          if (err3) throw err3;
+          stream.pipe(process.stdout);
+          stream.stderr.pipe(process.stderr);
+          stream.on("close", (code) => process.exit(code ?? 0));
+        });
+      });
     });
   })
   .on("error", (e) => {
     console.error(e.message);
     process.exit(1);
   })
-  .connect(sshConnectOptions(env, passwordOverride));
+  .connect(sshConnectOptions(env));
