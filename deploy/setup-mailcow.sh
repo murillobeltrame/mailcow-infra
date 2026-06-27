@@ -22,12 +22,14 @@ fi
 cd "${MAILCOW_DIR}"
 
 if [[ ! -f mailcow.conf ]]; then
-  echo "==> Gerando mailcow.conf..."
+  echo "==> Gerando mailcow.conf (modo não interativo)..."
+  ln -sf mailcow.conf .env
   export MAILCOW_HOSTNAME MAILCOW_TZ
-  ./generate_config.sh <<EOF
-${MAILCOW_HOSTNAME}
-${MAILCOW_TZ}
-EOF
+  export SKIP_CLAMD=y
+  export SKIP_BRANCH=y
+  export MAILCOW_BRANCH="${MAILCOW_BRANCH}"
+  export FORCE=1
+  ./generate_config.sh
 fi
 
 echo "==> Ajustando mailcow.conf para VPS 8GB..."
@@ -51,6 +53,10 @@ set_conf HTTP_PORT 80
 set_conf HTTPS_PORT 443
 set_conf MAILCOW_TZ "${MAILCOW_TZ}"
 set_conf ADDITIONAL_SAN ""
+# Evita conflito com whatsapp-evolution_internal (172.22.0.0/16)
+set_conf IPV4_NETWORK "${MAILCOW_IPV4_NETWORK:-172.23.1}"
+# IPv6 Docker desnecessário para SMTP/IMAP; evita conflito de pools
+set_conf ENABLE_IPV6 false
 
 if [[ -n "${MAILCOW_PASS:-}" ]]; then
   set_conf MAILCOW_PASS "${MAILCOW_PASS}"

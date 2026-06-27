@@ -7,4 +7,4 @@ function secret(bytes = 32) {
 
 console.log("# Cole em deploy/.env.deploy (NÃO commitar)\n");
 console.log(`MAILCOW_PASS=${secret(24)}`);
-console.log(`MAILCOW_API_KEY=${secret(32)}`);
+console.log(`MAILCOW_API_KEY=${secret(32).replace(/_/g, "A")}`);

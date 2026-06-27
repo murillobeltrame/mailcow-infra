@@ -57,10 +57,11 @@ async function upsertRecord(token, zoneId, type, name, content, extra = {}) {
 
 function fetchDkimViaSsh(env) {
   return new Promise((resolve, reject) => {
+    const domain = env.MAIL_DOMAIN || env.MAILCOW_HOSTNAME.split(".").slice(-3).join(".");
     const conn = new Client();
     conn
       .on("ready", () => {
-        const cmd = `docker compose -f /opt/mailcow-dockerized/docker-compose.yml exec -T rspamd-mailcow cat /var/lib/rspamd/dkim/${env.MAILCOW_HOSTNAME}.txt 2>/dev/null || true`;
+        const cmd = `cd /opt/mailcow-dockerized && docker compose exec -T rspamd-mailcow rspamadm dkim_keygen -d ${domain} -s dkim`;
         conn.exec(cmd, (err, stream) => {
           if (err) return reject(err);
           let out = "";
@@ -83,12 +84,12 @@ function fetchDkimViaSsh(env) {
 }
 
 function parseDkimTxt(raw) {
-  const m = raw.match(/"([^"]+)"\s*"([^"]+)"/);
-  if (!m) {
-    const single = raw.match(/"([^"]+)"/);
-    return single ? single[1].replace(/\s+/g, "") : null;
+  const parts = [...raw.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  if (parts.length >= 2) {
+    return parts.join("").replace(/\s+/g, "");
   }
-  return (m[1] + m[2]).replace(/\s+/g, "");
+  const single = raw.match(/"([^"]+)"/);
+  return single ? single[1].replace(/\s+/g, "") : null;
 }
 
 const env = loadEnv();
@@ -105,7 +106,11 @@ if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !MAILCOW_HOSTNAME || !VPS_IP
   process.exit(1);
 }
 
-const domain = MAIL_DOMAIN || MAILCOW_HOSTNAME.split(".").slice(-2).join(".");
+const domain =
+  MAIL_DOMAIN ||
+  (MAILCOW_HOSTNAME.includes(".com.br")
+    ? MAILCOW_HOSTNAME.split(".").slice(-3).join(".")
+    : MAILCOW_HOSTNAME.split(".").slice(-2).join("."));
 const mailHost = MAILCOW_HOSTNAME;
 
 console.log(`==> DNS Cloudflare: ${domain}`);
