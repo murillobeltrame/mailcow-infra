@@ -16,6 +16,10 @@ const DKIM = {
     zone: env.EXTRA_CLOUDFLARE_ZONE_ID,
     txt: "v=DKIM1;k=rsa;p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7vGmYbNtmflUGNa/8hfkGRji5TUtKi12wdjHSwOzF2kZySE801p/3XCUqCZQfcrKbUtw2LCmKlS/4hqMZi+lkEsXXvJDH1YkUjwWIxtYkMTdwTuOJc7cIIa5657fbHVYCEsBRgXLgLl5t1UxXRaEdiztdjfYFbNEa8QHCesX/nwIDAQAB",
   },
+  "storembimportados.com.br": {
+    zone: env.STORE_CLOUDFLARE_ZONE_ID || "a72f58be086db5aaba12d57b80a56be8",
+    txt: "v=DKIM1;k=rsa;p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCWsVfUgCLSIAyWpVWpKdx0YuX6EuDrzBKeBvldRvr1w1VXiRkklerWy3fpnWzMJJcLbVWSV2svbMvC25uLEQ+CvsmtnBbz0d5YQKSz2ivEO+Ti5UYKj4b/Fx/CwEuSEnEf70n9TzHkCPY5KHeeOO4bu2gEqLJquRlfTV9GdcLNQIDAQAB",
+  },
 };
 
 async function cfApi(method, path, body) {
