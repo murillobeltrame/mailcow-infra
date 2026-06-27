@@ -27,6 +27,7 @@ on:
           - ssl-fix
           - reset-admin
           - bootstrap
+          - migrate-email
           - disable-sogo
           - test-api
 

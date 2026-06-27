@@ -96,7 +96,20 @@ const commands = {
   },
 
   bootstrap() {
-    runScript("bootstrap-domain-db.sh", getEnv());
+    runScript("bootstrap-all-domains.sh", getEnv());
+  },
+
+  "migrate-email"() {
+    const env = getEnv();
+    runScript("sync-api-key.sh", env);
+    runScript("bootstrap-all-domains-db.sh", env);
+    runScript("bootstrap-all-domains.sh", env);
+    runScript("create-mailboxes.sh", env);
+    runScript("reset-mailbox-passwords.sh", env);
+    runNode("migrate-email-dns.mjs");
+    runNode("migrate-email-dns.mjs", ["--dkim"]);
+    runScript("verify-mail.sh", env);
+    runScript("validate-mailcow.sh", env);
   },
 
   "reset-admin"() {
@@ -169,6 +182,7 @@ Mailcow Nive Mail — deploy
   node deploy.mjs tune          Swap + otimizações VPS
   node deploy.mjs disable-sogo  Desativa SOGo (webmail)
   node deploy.mjs bootstrap     Cria domínio inicial no banco
+  node deploy.mjs migrate-email Migra DNS Zoho → Nive Mail (ambos domínios)
   node deploy.mjs reset-admin   Reset senha admin (MAILCOW_PASS)
   node deploy.mjs ssl           Renova Let's Encrypt
   node deploy.mjs ssl-fix       Corrige certificado HTTPS

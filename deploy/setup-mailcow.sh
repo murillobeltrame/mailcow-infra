@@ -67,6 +67,9 @@ if [[ -n "${MAILCOW_API_KEY:-}" ]]; then
   set_conf API_KEY "${MAILCOW_API_KEY}"
 fi
 
+# API exige lista de IPs permitidos; sem isso retorna "authentication failed"
+set_conf API_ALLOW_FROM "127.0.0.1,172.22.1.1,172.23.1.1"
+
 echo "==> Baixando imagens Docker (pode levar vários minutos)..."
 docker compose pull
 
