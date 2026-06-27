@@ -1,48 +1,79 @@
 #!/usr/bin/env bash
-# Rode DIRETO no VPS (root@srv1737681): bash fix-mail-vps-standalone.sh
-# Não precisa de deploy/GitHub Actions.
+# Rode DIRETO no VPS: curl -fsSL .../fix-mail-vps-standalone.sh | bash
 set -euo pipefail
 
+die() { echo "ERRO: $*" >&2; exit 1; }
+
 MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
+[[ -d "${MAILCOW_DIR}" ]] || die "Mailcow não encontrado em ${MAILCOW_DIR}"
 cd "${MAILCOW_DIR}"
 
-MAILCOW_HOSTNAME=$(grep '^MAILCOW_HOSTNAME=' mailcow.conf | cut -d= -f2- | tr -d '\r"')
-MAILCOW_PASS=$(grep '^MAILCOW_PASS=' mailcow.conf | cut -d= -f2- | tr -d '\r"')
-DBPASS=$(grep '^DBPASS=' mailcow.conf | cut -d= -f2- | tr -d '\r')
-KEY=$(grep '^API_KEY=' mailcow.conf | cut -d= -f2- | tr -d '\r')
+read_conf() {
+  local key="$1"
+  grep "^${key}=" mailcow.conf | cut -d= -f2- | tr -d '\r"' || true
+}
+
+MAILCOW_HOSTNAME=$(read_conf MAILCOW_HOSTNAME)
+MAILCOW_PASS=$(read_conf MAILCOW_PASS)
+DBPASS=$(read_conf DBPASS)
+KEY=$(read_conf API_KEY)
+
+[[ -n "${MAILCOW_HOSTNAME}" ]] || die "MAILCOW_HOSTNAME ausente em mailcow.conf"
+[[ -n "${DBPASS}" ]] || die "DBPASS ausente em mailcow.conf"
+[[ -n "${KEY}" ]] || die "API_KEY ausente em mailcow.conf"
 
 echo "==> Hostname: ${MAILCOW_HOSTNAME}"
 
-grep -q '^API_ALLOW_FROM=' mailcow.conf || echo 'API_ALLOW_FROM=127.0.0.1,172.22.1.1,172.23.1.1' >> mailcow.conf
+if ! grep -q '^API_ALLOW_FROM=' mailcow.conf; then
+  echo 'API_ALLOW_FROM=127.0.0.1,172.22.1.1,172.23.1.1' >> mailcow.conf
+fi
 
-docker compose exec -T mysql-mailcow mysql -u mailcow -p"${DBPASS}" mailcow -e "
+echo "==> Docker mysql"
+docker compose ps mysql-mailcow --format '{{.Status}}' | grep -qi up || die "mysql-mailcow não está rodando"
+
+mysql_exec() {
+  docker compose exec -T mysql-mailcow mysql -umailcow -p"${DBPASS}" mailcow "$@"
+}
+
+echo "==> Sync API key"
+mysql_exec <<SQL
 DELETE FROM api;
-INSERT INTO api (api_key, active, allow_from, access) VALUES ('${KEY}', 1, '127.0.0.1,172.22.1.1,172.23.1.1', 'rw');
-" 2>/dev/null
+INSERT INTO api (api_key, active, allow_from, access)
+VALUES ('${KEY}', 1, '127.0.0.1,172.22.1.1,172.23.1.1', 'rw');
+SQL
 
-echo "==> API:"
-curl -sk "https://127.0.0.1/api/v1/get/status/version" \
+echo "==> Teste API"
+API_OUT=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
   -H "Host: ${MAILCOW_HOSTNAME}" \
-  -H "X-API-Key: ${KEY}"
+  -H "X-API-Key: ${KEY}")
+echo "${API_OUT}"
+echo "${API_OUT}" | grep -q '"version"' || die "API Mailcow falhou"
+
 echo ""
+echo "==> Caixas"
+mysql_exec -e "SELECT username, active FROM mailbox ORDER BY username;"
 
-echo "==> Caixas:"
-docker compose exec -T mysql-mailcow mysql -u mailcow -p"${DBPASS}" mailcow \
-  -e "SELECT username, active FROM mailbox ORDER BY username;" 2>/dev/null
-
-echo "==> Reset senhas"
-for mb in $(curl -sk "https://127.0.0.1/api/v1/get/mailbox/all" \
-  -H "Host: ${MAILCOW_HOSTNAME}" \
-  -H "X-API-Key: ${KEY}" | grep -o '"username": "[^"]*"' | cut -d'"' -f4); do
-  echo "  ${mb}"
-  curl -sk -X POST "https://127.0.0.1/api/v1/edit/mailbox" \
+if [[ -n "${MAILCOW_PASS}" ]]; then
+  echo ""
+  echo "==> Reset senhas"
+  mapfile -t MAILBOXES < <(curl -sk "https://127.0.0.1/api/v1/get/mailbox/all" \
     -H "Host: ${MAILCOW_HOSTNAME}" \
-    -H "Content-Type: application/json" \
-    -H "X-API-Key: ${KEY}" \
-    -d "{\"items\":[\"${mb}\"],\"attr\":{\"password\":\"${MAILCOW_PASS}\",\"password2\":\"${MAILCOW_PASS}\",\"force_pw_update\":\"0\"}}" \
-    > /dev/null
-done
+    -H "X-API-Key: ${KEY}" | grep -o '"username": "[^"]*"' | cut -d'"' -f4)
+  for mb in "${MAILBOXES[@]}"; do
+    [[ -z "${mb}" ]] && continue
+    echo "  ${mb}"
+    curl -sk -X POST "https://127.0.0.1/api/v1/edit/mailbox" \
+      -H "Host: ${MAILCOW_HOSTNAME}" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: ${KEY}" \
+      -d "$(python3 -c "import json,sys; print(json.dumps({'items':[sys.argv[1]],'attr':{'password':sys.argv[2],'password2':sys.argv[2],'force_pw_update':'0'}}))" "${mb}" "${MAILCOW_PASS}")" \
+      > /dev/null
+  done
+else
+  echo "AVISO: MAILCOW_PASS não está em mailcow.conf — senhas das caixas não alteradas."
+fi
 
+echo ""
 echo "==> DKIM"
 for d in nivesistemas.com.br corelycommerce.com.br; do
   docker compose exec -T rspamd-mailcow rspamadm dkim_keygen -d "${d}" -s dkim 2>/dev/null || true
@@ -50,10 +81,15 @@ for d in nivesistemas.com.br corelycommerce.com.br; do
   docker compose exec -T rspamd-mailcow cat "/var/lib/rspamd/dkim/${d}.txt" 2>/dev/null | head -3 || true
 done
 docker compose restart rspamd-mailcow postfix-mailcow
+sleep 5
 
+echo ""
 echo "==> Teste IMAP/SMTP"
-export MAILCOW_PASS
-python3 - <<'PY'
+if [[ -z "${MAILCOW_PASS}" ]]; then
+  echo "Pulando teste (MAILCOW_PASS ausente)."
+else
+  export MAILCOW_PASS
+  python3 - <<'PY'
 import imaplib, smtplib, os, sys
 pw = os.environ["MAILCOW_PASS"]
 accounts = [
@@ -82,9 +118,11 @@ except Exception as e:
     print(f"SMTP FAIL: {e}")
 sys.exit(0 if ok else 1)
 PY
+fi
 
-echo "==> PTR atual:"
-dig +short -x 2.25.181.76 @8.8.8.8 || true
 echo ""
-echo "Configure PTR no hPanel: 2.25.181.76 -> mail.nivesistemas.com.br"
+echo "==> PTR atual:"
+dig +short -x 2.25.181.76 @8.8.8.8 2>/dev/null || true
+echo ""
+echo "PTR manual no hPanel: 2.25.181.76 -> mail.nivesistemas.com.br"
 echo "Fix concluído."
