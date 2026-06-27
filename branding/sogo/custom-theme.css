@@ -1,0 +1,83 @@
+/* Nive Mail — overrides SOGo (complementa custom-theme.js) */
+
+body,
+.md-default-theme {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+md-toolbar.md-default-theme:not(.md-menu-toolbar),
+md-toolbar:not(.md-menu-toolbar) {
+  background-color: #22578d !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+md-toolbar.md-hue-2 {
+  background-color: #1e293b !important;
+}
+
+.md-button.md-primary,
+.md-button.md-default-theme.md-primary {
+  background-color: #22578d !important;
+  color: #ffffff !important;
+}
+
+.md-button.md-primary:not([disabled]):hover {
+  background-color: #1a4f7a !important;
+}
+
+md-content.md-default-theme,
+md-content {
+  background-color: #f4f7fb;
+}
+
+md-list-item.md-default-theme .md-list-item-inner,
+md-list-item .md-list-item-inner {
+  color: #1d1d1b;
+}
+
+md-list-item.md-default-theme.selected .md-list-item-inner,
+md-list-item.selected .md-list-item-inner {
+  background-color: rgb(34 87 141 / 0.12) !important;
+  color: #22578d !important;
+}
+
+md-progress-linear .md-bar {
+  background-color: #22578d !important;
+}
+
+md-progress-circular .md-inner .md-left .md-half-circle,
+md-progress-circular .md-inner .md-right .md-half-circle {
+  border-color: #22578d !important;
+}
+
+a,
+.md-default-theme a {
+  color: #22578d;
+}
+
+a:hover {
+  color: #1a4f7a;
+}
+
+.sogo-login-box,
+#loginScreen {
+  background-color: #f4f7fb;
+}
+
+.sogo-login-box md-toolbar,
+#loginScreen md-toolbar {
+  background-color: #22578d !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #22578d;
+  outline-offset: 1px;
+}

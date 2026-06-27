@@ -1,18 +1,69 @@
-/* Nive Sistemas — identidade visual Mailcow (0081-custom-mailcow.css) */
+/* ═══════════════════════════════════════════════════════════
+   Nive Mail — identidade visual Mailcow
+   Tokens alinhados ao design system Nive Sistemas
+   ═══════════════════════════════════════════════════════════ */
 
+/* ── 1. Tokens ── */
 :root {
+  /* Brand */
   --nive-primary: #22578d;
   --nive-primary-hover: #1a4f7a;
+  --nive-primary-active: #164068;
+  --nive-primary-subtle: rgb(34 87 141 / 0.12);
   --nive-secondary: #071836;
+
+  /* Surfaces */
   --nive-sidebar: #1e293b;
   --nive-sidebar-border: #334155;
-  --nive-bg: #f1f5f9;
+  --nive-bg: #f4f7fb;
   --nive-surface: #ffffff;
+  --nive-surface-muted: #f8fafc;
   --nive-border: #e2e8f0;
-  --nive-text: #0f172a;
+  --nive-border-strong: #cbd5e1;
+
+  /* Text */
+  --nive-text: #1d1d1b;
   --nive-muted: #64748b;
+  --nive-text-subtle: #94a3b8;
+  --nive-text-on-dark: #e2e8f0;
+  --nive-text-on-dark-hover: #ffffff;
+
+  /* Semantic */
+  --nive-success: #16a34a;
+  --nive-success-subtle: rgb(34 197 94 / 0.14);
+  --nive-warning: #d97706;
+  --nive-warning-subtle: rgb(217 119 6 / 0.14);
+  --nive-danger: #dc2626;
+  --nive-danger-subtle: rgb(220 38 38 / 0.12);
+  --nive-info: #22578d;
+  --nive-info-subtle: rgb(34 87 141 / 0.12);
+
+  /* Admin panel */
+  --nive-admin-bg: #f4f7fb;
+  --nive-admin-surface: #ffffff;
+  --nive-admin-border: rgb(226 232 240 / 0.95);
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --admin-sidebar-width: 17.5rem;
+
+  /* Radius & shadows */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-md: 0 8px 24px rgb(15 23 42 / 0.12);
+  --nive-focus-ring: 0 0 0 3px rgb(34 87 141 / 0.14);
 }
 
+/* ── 2. Base ── */
 body {
   font-family:
     system-ui,
@@ -21,14 +72,14 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif !important;
+  color: var(--nive-text);
 }
 
-meta[name="theme-color"],
-head meta[name="theme-color"] {
-  /* sobrescrito via JS abaixo quando possível */
+body:has(nav.navbar) {
+  background: var(--nive-admin-bg) !important;
 }
 
-/* ── Login (admin, usuário, domainadmin) ── */
+/* ── 3. Login (admin, usuário, domainadmin) ── */
 body:has(.mailcow-logo),
 body:not(:has(nav.navbar)) {
   min-height: 100vh;
@@ -47,7 +98,7 @@ body:not(:has(nav.navbar)) .overlay {
     content: "";
     position: fixed;
     inset: 0 auto 0 0;
-    width: 16rem;
+    width: var(--admin-sidebar-width);
     background: var(--nive-sidebar);
     border-right: 1px solid var(--nive-sidebar-border);
     z-index: 0;
@@ -57,8 +108,8 @@ body:not(:has(nav.navbar)) .overlay {
   body:not(:has(nav.navbar))::after {
     content: "";
     position: fixed;
-    top: 1.75rem;
-    left: 1.5rem;
+    top: var(--space-7);
+    left: var(--space-6);
     width: 13rem;
     height: 18rem;
     background: url("/img/nive-sidebar-brand.svg") no-repeat left top / contain;
@@ -68,8 +119,8 @@ body:not(:has(nav.navbar)) .overlay {
 
   body:has(.mailcow-logo) .row.mb-4,
   body:not(:has(nav.navbar)) .row.mb-4 {
-    margin-left: 16rem !important;
-    width: calc(100% - 16rem);
+    margin-left: var(--admin-sidebar-width) !important;
+    width: calc(100% - var(--admin-sidebar-width));
     min-height: 100vh;
     align-items: center;
     margin-top: 0 !important;
@@ -78,18 +129,61 @@ body:not(:has(nav.navbar)) .overlay {
   }
 }
 
+/* Login mobile: marca compacta no topo do card */
+@media (max-width: 991.98px) {
+  body:has(.mailcow-logo) .mailcow-logo,
+  body:not(:has(nav.navbar)) .mailcow-logo {
+    text-align: center;
+    margin-bottom: var(--space-2);
+  }
+
+  body:has(.mailcow-logo) .mailcow-logo .main-logo,
+  body:not(:has(nav.navbar)) .mailcow-logo .main-logo {
+    max-height: 44px !important;
+  }
+
+  body:has(.mailcow-logo) .card,
+  body:not(:has(nav.navbar)) .card {
+    margin: var(--space-4);
+    max-width: 24rem;
+  }
+
+  body:has(.mailcow-logo) .card-body,
+  body:not(:has(nav.navbar)) .card-body {
+    padding: var(--space-6) !important;
+  }
+
+  body:has(.mailcow-logo) .btn,
+  body:not(:has(nav.navbar)) .btn {
+    min-height: 2.75rem;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+}
+
+/* Fallback para browsers sem :has() */
+@supports not selector(:has(*)) {
+  body:not(.logged-in) {
+    min-height: 100vh;
+    background: var(--nive-bg) !important;
+  }
+}
+
+body:has(.mailcow-logo) .row.mb-4 > [class*="col-"],
 body:not(:has(nav.navbar)) .row.mb-4 > [class*="col-"] {
   margin-left: auto !important;
   margin-right: auto !important;
 }
 
+body:has(.mailcow-logo) .card,
 body:not(:has(nav.navbar)) .card {
   border: 1px solid var(--nive-border) !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
   overflow: hidden;
 }
 
+body:has(.mailcow-logo) .card-header,
 body:not(:has(nav.navbar)) .card-header {
   background: var(--nive-surface) !important;
   border-bottom: 1px solid var(--nive-border) !important;
@@ -97,42 +191,50 @@ body:not(:has(nav.navbar)) .card-header {
   font-weight: 600;
 }
 
+body:has(.mailcow-logo) .card-body,
 body:not(:has(nav.navbar)) .card-body {
   background: var(--nive-surface) !important;
 }
 
+body:has(.mailcow-logo) .mailcow-logo .main-logo,
 body:not(:has(nav.navbar)) .mailcow-logo .main-logo {
   display: inline-block !important;
   max-height: 52px;
   width: auto;
 }
 
+body:has(.mailcow-logo) .mailcow-logo .main-logo-dark,
 body:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark {
   display: none !important;
 }
 
+body:has(.mailcow-logo) .form-control,
 body:not(:has(nav.navbar)) .form-control {
-  background: #ffffff !important;
+  background: var(--nive-surface) !important;
   color: var(--nive-text) !important;
-  border-color: #cbd5e1 !important;
-  border-radius: 0.375rem;
+  border-color: var(--nive-border-strong) !important;
+  border-radius: var(--radius-sm);
 }
 
+body:has(.mailcow-logo) .form-control:focus,
 body:not(:has(nav.navbar)) .form-control:focus {
   border-color: var(--nive-primary);
-  box-shadow: 0 0 0 3px rgb(34 87 141 / 0.14);
+  box-shadow: var(--nive-focus-ring);
 }
 
+body:has(.mailcow-logo) .input-group-text,
 body:not(:has(nav.navbar)) .input-group-text {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--nive-surface-muted);
+  border-color: var(--nive-border-strong);
   color: var(--nive-muted);
 }
 
+body:has(.mailcow-logo) .text-muted,
 body:not(:has(nav.navbar)) .text-muted {
   color: var(--nive-muted) !important;
 }
 
+body:has(.mailcow-logo) legend,
 body:not(:has(nav.navbar)) legend {
   font-size: 0.75rem;
   font-weight: 600;
@@ -141,52 +243,66 @@ body:not(:has(nav.navbar)) legend {
   color: var(--nive-muted);
 }
 
-/* ── Botões ── */
+/* ── 4. Botões ── */
+.btn-primary,
+.btn-primary:focus,
 .btn-success,
 .btn-success:focus {
   background-color: var(--nive-primary) !important;
   border-color: var(--nive-primary) !important;
-  color: #fff !important;
+  color: var(--nive-surface) !important;
 }
 
+.btn-primary:hover,
+.btn-primary:active,
 .btn-success:hover,
 .btn-success:active {
   background-color: var(--nive-primary-hover) !important;
   border-color: var(--nive-primary-hover) !important;
 }
 
-.btn-primary,
-.btn-primary:focus {
-  background-color: var(--nive-primary) !important;
-  border-color: var(--nive-primary) !important;
-}
-
-.btn-primary:hover,
-.btn-primary:active {
-  background-color: var(--nive-primary-hover) !important;
-  border-color: var(--nive-primary-hover) !important;
-}
-
 .btn-secondary {
   border-color: var(--nive-border) !important;
-  color: #334155 !important;
+  color: var(--nive-sidebar-border) !important;
 }
 
 .btn-secondary:hover {
-  background: #f8fafc !important;
-  border-color: #cbd5e1 !important;
+  background: var(--nive-surface-muted) !important;
+  border-color: var(--nive-border-strong) !important;
   color: var(--nive-text) !important;
 }
 
-/* ── Navbar autenticada ── */
+.btn-danger {
+  background-color: var(--nive-danger) !important;
+  border-color: var(--nive-danger) !important;
+}
+
+.btn-warning {
+  background-color: var(--nive-warning) !important;
+  border-color: var(--nive-warning) !important;
+  color: var(--nive-text) !important;
+}
+
+.btn-info {
+  background-color: var(--nive-info) !important;
+  border-color: var(--nive-info) !important;
+}
+
+.btn-outline-primary {
+  color: var(--nive-primary) !important;
+  border-color: var(--nive-primary) !important;
+}
+
+.btn-outline-primary:hover {
+  background: var(--nive-primary-subtle) !important;
+  color: var(--nive-primary-hover) !important;
+}
+
+/* ── 5. Navbar autenticada ── */
 nav.navbar {
   background: var(--nive-sidebar) !important;
   border-bottom: 1px solid var(--nive-sidebar-border) !important;
   box-shadow: none !important;
-}
-
-nav.navbar.navbar-light {
-  background: var(--nive-sidebar) !important;
 }
 
 nav.navbar .navbar-brand .main-logo {
@@ -205,95 +321,261 @@ nav.navbar .navbar-brand .main-logo:not(.main-logo-dark) {
 nav.navbar .nav-link,
 nav.navbar .navbar-brand,
 nav.navbar .dropdown-toggle {
-  color: #e2e8f0 !important;
+  color: var(--nive-text-on-dark) !important;
 }
 
 nav.navbar .nav-link:hover,
 nav.navbar .dropdown-toggle:hover {
-  color: #ffffff !important;
+  color: var(--nive-text-on-dark-hover) !important;
 }
 
 nav.navbar .dropdown-menu {
   border-color: var(--nive-border);
-  box-shadow: 0 8px 24px rgb(15 23 42 / 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 nav.navbar .form-check-label {
-  color: #cbd5e1 !important;
+  color: var(--nive-border-strong) !important;
 }
 
-/* ── Abas e painel interno ── */
+/* ── 6. Painel interno ── */
+.container-fluid {
+  padding-top: var(--space-4);
+}
+
+.page-header {
+  color: var(--nive-text);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+}
+
+.card {
+  border: 1px solid var(--nive-admin-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm);
+  background: var(--nive-admin-surface);
+}
+
+body:has(nav.navbar) .card-header {
+  background: var(--nive-surface-muted) !important;
+  border-bottom: 1px solid var(--nive-border) !important;
+  color: var(--nive-text) !important;
+  font-weight: 600;
+}
+
+.card-body {
+  background: var(--nive-admin-surface);
+}
+
+.nav-tabs {
+  border-bottom-color: var(--nive-border);
+}
+
+.nav-tabs .nav-link {
+  color: var(--nive-muted);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
 .nav-tabs .nav-link.active,
 .nav-tabs .nav-item.show .nav-link {
   color: var(--nive-primary) !important;
   border-color: var(--nive-border) var(--nive-border) var(--nive-surface) !important;
+  font-weight: 600;
 }
 
 .nav-tabs .nav-link:hover {
   color: var(--nive-primary-hover) !important;
 }
 
-.card-header:not(body:not(:has(nav.navbar)) .card-header) {
-  background: #f8fafc !important;
-}
-
-.page-header,
-legend {
+/* ── 7. Formulários (painel) ── */
+.form-control,
+.form-select {
+  border-color: var(--nive-border-strong);
+  border-radius: var(--radius-sm);
   color: var(--nive-text);
 }
 
-/* ── Dark mode Mailcow → manter identidade Nive ── */
-html.dark-mode body:not(:has(nav.navbar)),
-body.dark-mode:not(:has(nav.navbar)) {
-  background: var(--nive-bg) !important;
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--nive-primary);
+  box-shadow: var(--nive-focus-ring);
 }
 
-html.dark-mode body:not(:has(nav.navbar))::before,
-body.dark-mode:not(:has(nav.navbar))::before {
-  background: var(--nive-sidebar) !important;
+.input-group-text {
+  background: var(--nive-surface-muted);
+  border-color: var(--nive-border-strong);
+  color: var(--nive-muted);
 }
 
-html.dark-mode body:not(:has(nav.navbar)) .card,
-body.dark-mode:not(:has(nav.navbar)) .card,
-html.dark-mode body:not(:has(nav.navbar)) .card-header,
-html.dark-mode body:not(:has(nav.navbar)) .card-body,
-body.dark-mode:not(:has(nav.navbar)) .card-header,
-body.dark-mode:not(:has(nav.navbar)) .card-body {
-  background: var(--nive-surface) !important;
-  border-color: var(--nive-border) !important;
+.form-check-input:checked {
+  background-color: var(--nive-primary);
+  border-color: var(--nive-primary);
+}
+
+legend {
+  color: var(--nive-text);
+  font-weight: 600;
+}
+
+/* ── 8. Tabelas ── */
+.table {
+  color: var(--nive-text);
+  border-color: var(--nive-border);
+}
+
+.table thead th,
+.table-light th {
+  background: var(--nive-surface-muted) !important;
+  color: var(--nive-text) !important;
+  border-bottom-color: var(--nive-border) !important;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: rgb(248 250 252 / 0.6);
+}
+
+.table-hover > tbody > tr:hover > * {
+  background-color: var(--nive-primary-subtle) !important;
+}
+
+.table td,
+.table th {
+  border-color: var(--nive-border);
+  vertical-align: middle;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+  border-color: var(--nive-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+/* ── 9. Alertas ── */
+.alert {
+  border-radius: var(--radius-md);
+  border-width: 1px;
+}
+
+.alert-success {
+  background: var(--nive-success-subtle);
+  border-color: rgb(34 197 94 / 0.3);
+  color: #14532d;
+}
+
+.alert-warning {
+  background: var(--nive-warning-subtle);
+  border-color: rgb(217 119 6 / 0.3);
+  color: #78350f;
+}
+
+.alert-danger {
+  background: var(--nive-danger-subtle);
+  border-color: rgb(220 38 38 / 0.3);
+  color: #7f1d1d;
+}
+
+.alert-info {
+  background: var(--nive-info-subtle);
+  border-color: rgb(34 87 141 / 0.3);
+  color: var(--nive-secondary);
+}
+
+/* ── 10. Badges ── */
+.badge {
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.bg-success,
+.badge.bg-success {
+  background-color: var(--nive-success) !important;
+}
+
+.bg-warning,
+.badge.bg-warning {
+  background-color: var(--nive-warning) !important;
   color: var(--nive-text) !important;
 }
 
-html.dark-mode body:not(:has(nav.navbar)) .form-control,
-body.dark-mode:not(:has(nav.navbar)) .form-control {
-  background: #ffffff !important;
-  color: var(--nive-text) !important;
-  border-color: #cbd5e1 !important;
+.bg-danger,
+.badge.bg-danger {
+  background-color: var(--nive-danger) !important;
 }
 
-html.dark-mode body:not(:has(nav.navbar)) .input-group-text,
-body.dark-mode:not(:has(nav.navbar)) .input-group-text {
-  background: #f8fafc !important;
-  color: var(--nive-muted) !important;
-  border-color: #cbd5e1 !important;
+.bg-primary,
+.badge.bg-primary {
+  background-color: var(--nive-primary) !important;
 }
 
-html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo,
-body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo {
-  display: inline-block !important;
+.bg-secondary,
+.badge.bg-secondary {
+  background-color: var(--nive-muted) !important;
 }
 
-html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark,
-body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark {
-  display: none !important;
+/* ── 11. Modais ── */
+.modal-content {
+  border: 1px solid var(--nive-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
-html.dark-mode nav.navbar,
-body.dark-mode nav.navbar {
-  background: var(--nive-sidebar) !important;
+.modal-header {
+  background: var(--nive-surface-muted);
+  border-bottom: 1px solid var(--nive-border);
 }
 
-/* ── Links ── */
+.modal-footer {
+  border-top: 1px solid var(--nive-border);
+  background: var(--nive-surface-muted);
+}
+
+/* ── 12. Dropdowns & paginação ── */
+.dropdown-menu {
+  border-color: var(--nive-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: var(--nive-primary-subtle);
+  color: var(--nive-primary);
+}
+
+.pagination .page-link {
+  color: var(--nive-primary);
+  border-color: var(--nive-border);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--nive-primary);
+  border-color: var(--nive-primary);
+}
+
+.pagination .page-link:hover {
+  background: var(--nive-primary-subtle);
+  color: var(--nive-primary-hover);
+}
+
+/* ── 13. Logs & código ── */
+pre,
+code,
+.log-output {
+  font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+  font-size: 0.8125rem;
+  background: var(--nive-surface-muted);
+  border: 1px solid var(--nive-border);
+  border-radius: var(--radius-sm);
+  color: var(--nive-text);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* ── 14. Links & footer ── */
 a:not(.btn) {
   color: var(--nive-primary);
 }
@@ -302,8 +584,103 @@ a:not(.btn):hover {
   color: var(--nive-primary-hover);
 }
 
-/* ── Footer UI customizado ── */
 .footer,
 .ui-footer {
   color: var(--nive-muted);
+  padding: var(--space-4) 0;
+}
+
+/* ── 15. Dark mode ── */
+html.dark-mode body:has(.mailcow-logo),
+html.dark-mode body:not(:has(nav.navbar)),
+body.dark-mode:has(.mailcow-logo),
+body.dark-mode:not(:has(nav.navbar)) {
+  background: var(--nive-bg) !important;
+}
+
+html.dark-mode body:has(.mailcow-logo)::before,
+html.dark-mode body:not(:has(nav.navbar))::before,
+body.dark-mode:has(.mailcow-logo)::before,
+body.dark-mode:not(:has(nav.navbar))::before {
+  background: var(--nive-sidebar) !important;
+}
+
+html.dark-mode body:has(nav.navbar),
+body.dark-mode:has(nav.navbar) {
+  background: #0f172a !important;
+}
+
+html.dark-mode body:has(nav.navbar) .card,
+body.dark-mode:has(nav.navbar) .card {
+  background: #1e293b;
+  border-color: var(--nive-sidebar-border) !important;
+  color: var(--nive-text-on-dark);
+}
+
+html.dark-mode body:has(nav.navbar) .card-header,
+body.dark-mode:has(nav.navbar) .card-header {
+  background: #334155 !important;
+  border-color: var(--nive-sidebar-border) !important;
+  color: var(--nive-text-on-dark) !important;
+}
+
+html.dark-mode body:has(nav.navbar) .table,
+body.dark-mode:has(nav.navbar) .table {
+  color: var(--nive-text-on-dark);
+}
+
+html.dark-mode body:has(nav.navbar) .table thead th,
+body.dark-mode:has(nav.navbar) .table thead th {
+  background: #334155 !important;
+  color: var(--nive-text-on-dark) !important;
+}
+
+html.dark-mode nav.navbar,
+body.dark-mode nav.navbar {
+  background: var(--nive-sidebar) !important;
+}
+
+/* Login: card claro intencional (contraste com sidebar escura) */
+html.dark-mode body:has(.mailcow-logo) .card,
+html.dark-mode body:not(:has(nav.navbar)) .card,
+body.dark-mode:has(.mailcow-logo) .card,
+body.dark-mode:not(:has(nav.navbar)) .card,
+html.dark-mode body:has(.mailcow-logo) .card-header,
+html.dark-mode body:not(:has(nav.navbar)) .card-header,
+html.dark-mode body:has(.mailcow-logo) .card-body,
+html.dark-mode body:not(:has(nav.navbar)) .card-body,
+body.dark-mode:has(.mailcow-logo) .card-header,
+body.dark-mode:not(:has(nav.navbar)) .card-header,
+body.dark-mode:has(.mailcow-logo) .card-body,
+body.dark-mode:not(:has(nav.navbar)) .card-body {
+  background: var(--nive-surface) !important;
+  border-color: var(--nive-border) !important;
+  color: var(--nive-text) !important;
+}
+
+html.dark-mode body:has(.mailcow-logo) .mailcow-logo .main-logo,
+html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo,
+body.dark-mode:has(.mailcow-logo) .mailcow-logo .main-logo,
+body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo {
+  display: inline-block !important;
+}
+
+html.dark-mode body:has(.mailcow-logo) .mailcow-logo .main-logo-dark,
+html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark,
+body.dark-mode:has(.mailcow-logo) .mailcow-logo .main-logo-dark,
+body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark {
+  display: none !important;
+}
+
+/* ── 16. Acessibilidade ── */
+.btn:focus-visible,
+.nav-link:focus-visible,
+a:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+.page-link:focus-visible,
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--nive-primary);
+  outline-offset: 2px;
 }

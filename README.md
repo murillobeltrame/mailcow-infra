@@ -13,9 +13,10 @@ Repositório de deploy e operação do **Nive Mail** (Mailcow self-hosted) no VP
 | Hostname SMTP/IMAP | `mail.nivesistemas.com.br` |
 | Domínio principal | `nivesistemas.com.br` |
 | Domínio adicional | `corelycommerce.com.br` |
-| Webmail SOGo | Desativado — use Thunderbird, Outlook ou app mobile |
+| Webmail SOGo | https://mail.nivesistemas.com.br/SOGo — login com e-mail da caixa |
 | Login admin | `admin` + senha em `MAILCOW_PASS` (secret GitHub) |
 | Nome do painel | **Nive Mail** |
+| Idioma padrão | **Português (Brasil)** — painel admin e SOGo |
 
 **PTR/rDNS (manual no hPanel):** `2.25.181.76` → `mail.nivesistemas.com.br`
 

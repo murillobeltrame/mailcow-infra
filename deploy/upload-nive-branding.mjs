@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv, connectSsh } from "./lib/env.mjs";
@@ -13,7 +13,24 @@ const scriptPath = join(__dir, "apply-nive-branding.sh");
 const remoteDir = "/tmp/nive-branding";
 const remoteScript = "/tmp/apply-nive-branding.sh";
 
-const files = readdirSync(brandingDir).filter((f) => !f.startsWith("."));
+function collectFiles(dir, base = dir) {
+  const entries = readdirSync(dir).filter((f) => !f.startsWith("."));
+  const files = [];
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      files.push(...collectFiles(full, base));
+    } else {
+      files.push({
+        local: full,
+        remote: posix.join(remoteDir, full.slice(base.length + 1).replace(/\\/g, "/")),
+      });
+    }
+  }
+  return files;
+}
+
+const files = collectFiles(brandingDir);
 
 function connect() {
   return new Promise((resolve, reject) => {
@@ -57,6 +74,15 @@ function mkdir(sftpClient, dir) {
   });
 }
 
+async function mkdirp(sftpClient, dir) {
+  const parts = dir.split("/").filter(Boolean);
+  let current = "";
+  for (const part of parts) {
+    current += `/${part}`;
+    await mkdir(sftpClient, current);
+  }
+}
+
 function writeFile(sftpClient, remote, content, mode = 0o644) {
   return new Promise((resolve, reject) => {
     sftpClient.writeFile(remote, content, { mode }, (err) => (err ? reject(err) : resolve()));
@@ -69,11 +95,10 @@ try {
   await exec(conn, `rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
   await mkdir(s, remoteDir);
 
-  for (const file of files) {
-    const local = join(brandingDir, file);
-    const remote = posix.join(remoteDir, file);
+  for (const { local, remote } of files) {
+    await mkdirp(s, posix.dirname(remote));
     await writeFile(s, remote, readFileSync(local));
-    console.log(`uploaded ${file}`);
+    console.log(`uploaded ${remote.slice(remoteDir.length + 1)}`);
   }
 
   const script = readFileSync(scriptPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
