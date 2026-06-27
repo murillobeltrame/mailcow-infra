@@ -48,7 +48,7 @@ set_conf() {
 # Economiza ~1.5 GB RAM; antivírus opcional em produção enxuta
 set_conf SKIP_CLAMD y
 set_conf SKIP_SOLR y
-set_conf SKIP_SOGO n
+set_conf SKIP_SOGO y
 set_conf HTTP_PORT 80
 set_conf HTTPS_PORT 443
 set_conf MAILCOW_TZ "${MAILCOW_TZ}"

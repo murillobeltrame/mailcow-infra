@@ -1,8 +1,28 @@
 import { Client } from "ssh2";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadEnv, sshConnectOptions } from "./lib/env.mjs";
 
-const password = process.argv[2];
-const cmd = process.argv[3];
-if (!password || !cmd) process.exit(1);
+const __dir = dirname(fileURLToPath(import.meta.url));
+const envPath = join(__dir, ".env.deploy");
+
+/** Compat: _ssh-run.mjs "senha" "cmd"  ou  _ssh-run.mjs "cmd" */
+let cmd;
+let passwordOverride;
+if (process.argv[3]) {
+  passwordOverride = process.argv[2];
+  cmd = process.argv[3];
+} else {
+  cmd = process.argv[2];
+}
+
+if (!cmd) {
+  console.error("Uso: node _ssh-run.mjs \"comando remoto\"");
+  console.error("     node _ssh-run.mjs \"senha\" \"comando remoto\"  (legado)");
+  process.exit(1);
+}
+
+const env = loadEnv(envPath);
 
 const conn = new Client();
 conn
@@ -21,10 +41,4 @@ conn
     console.error(e.message);
     process.exit(1);
   })
-  .connect({
-    host: process.env.VPS_IP || "2.25.181.76",
-    port: Number(process.env.VPS_PORT || 22),
-    username: process.env.VPS_USER || "root",
-    password,
-    readyTimeout: 120000,
-  });
+  .connect(sshConnectOptions(env, passwordOverride));

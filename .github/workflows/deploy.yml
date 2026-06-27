@@ -1,0 +1,93 @@
+name: Deploy Nive Mail
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "branding/**"
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Comando deploy.mjs
+        required: true
+        default: branding
+        type: choice
+        options:
+          - branding
+          - update
+          - dns
+          - dns-dkim
+          - validate
+          - setup
+          - full
+          - tune
+          - ssl
+          - ssl-fix
+          - reset-admin
+          - bootstrap
+          - disable-sogo
+          - test-api
+
+concurrency:
+  group: mailcow-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: deploy/package-lock.json
+
+      - name: Install dependencies
+        working-directory: deploy
+        run: npm ci
+
+      - name: Create deploy/.env.deploy from secrets
+        working-directory: deploy
+        run: node ci-write-env.mjs
+        env:
+          VPS_IP: ${{ secrets.VPS_IP }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_PASS: ${{ secrets.VPS_SSH_PASS }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          MAILCOW_DIR: ${{ secrets.MAILCOW_DIR }}
+          MAILCOW_HOSTNAME: ${{ secrets.MAILCOW_HOSTNAME }}
+          MAILCOW_TZ: ${{ secrets.MAILCOW_TZ }}
+          MAIL_DOMAIN: ${{ secrets.MAIL_DOMAIN }}
+          MAILCOW_IPV4_NETWORK: ${{ secrets.MAILCOW_IPV4_NETWORK }}
+          MAILCOW_PASS: ${{ secrets.MAILCOW_PASS }}
+          MAILCOW_API_KEY: ${{ secrets.MAILCOW_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXTRA_MAIL_DOMAIN: ${{ secrets.EXTRA_MAIL_DOMAIN }}
+          EXTRA_CLOUDFLARE_ZONE_ID: ${{ secrets.EXTRA_CLOUDFLARE_ZONE_ID }}
+          GIT_REPO: ${{ secrets.GIT_REPO }}
+
+      - name: Definir comando
+        id: cmd
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "command=${{ github.event.inputs.command }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "command=branding" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run deploy command
+        working-directory: deploy
+        run: node deploy.mjs "${{ steps.cmd.outputs.command }}"
+        env:
+          DEPLOY_DKIM_WAIT_SEC: ${{ vars.DEPLOY_DKIM_WAIT_SEC || '120' }}

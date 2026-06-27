@@ -1,12 +1,22 @@
 import { Client } from "ssh2";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadEnv, sshConnectOptions } from "./lib/env.mjs";
 
-const password = process.argv[2];
-const scriptPath = process.argv[3];
-const envPath = process.argv[4];
-if (!password || !scriptPath) process.exit(1);
+const __dir = dirname(fileURLToPath(import.meta.url));
+const scriptName = process.argv[2];
+const envPath = process.argv[3] || join(__dir, ".env.deploy");
 
-function parseEnv(text) {
+if (!scriptName) {
+  console.error("Uso: node _ssh-deploy.mjs <script.sh> [.env.deploy]");
+  process.exit(1);
+}
+
+const scriptPath = join(__dir, scriptName);
+const env = loadEnv(envPath);
+
+function parseEnvExports(text) {
   const out = [];
   for (const line of text.split("\n")) {
     const clean = line.replace(/\r$/, "");
@@ -18,7 +28,7 @@ function parseEnv(text) {
 }
 
 const script = readFileSync(scriptPath, "utf8");
-const envExports = envPath ? parseEnv(readFileSync(envPath, "utf8")) : "";
+const envExports = existsSync(envPath) ? parseEnvExports(readFileSync(envPath, "utf8")) : "";
 const remote = `/tmp/mailcow-deploy-${Date.now()}.sh`;
 const wrapper = `${envExports}\n${script}`.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
@@ -42,10 +52,4 @@ conn
     console.error(e.message);
     process.exit(1);
   })
-  .connect({
-    host: process.env.VPS_IP || "2.25.181.76",
-    port: Number(process.env.VPS_PORT || 22),
-    username: process.env.VPS_USER || "root",
-    password,
-    readyTimeout: 120000,
-  });
+  .connect(sshConnectOptions(env));

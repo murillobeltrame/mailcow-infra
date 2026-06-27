@@ -5,23 +5,14 @@
  *   node deploy/configure-dns.mjs           # A, MX, SPF, DMARC
  *   node deploy/configure-dns.mjs --dkim    # + DKIM (requer Mailcow rodando)
  */
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "ssh2";
+import { loadEnv, sshConnectOptions } from "./lib/env.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const withDkim = process.argv.includes("--dkim");
-
-function loadEnv() {
-  const path = join(__dir, ".env.deploy");
-  const env = {};
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)=(.*)$/);
-    if (m) env[m[1]] = m[2].trim();
-  }
-  return env;
-}
+const envPath = join(__dir, ".env.deploy");
 
 async function cfApi(token, method, path, body) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
@@ -55,13 +46,12 @@ async function upsertRecord(token, zoneId, type, name, content, extra = {}) {
   }
 }
 
-function fetchDkimViaSsh(env) {
+function fetchDkimViaSsh(env, dkimDomain) {
   return new Promise((resolve, reject) => {
-    const domain = env.MAIL_DOMAIN || env.MAILCOW_HOSTNAME.split(".").slice(-3).join(".");
     const conn = new Client();
     conn
       .on("ready", () => {
-        const cmd = `cd /opt/mailcow-dockerized && docker compose exec -T rspamd-mailcow rspamadm dkim_keygen -d ${domain} -s dkim`;
+        const cmd = `cd /opt/mailcow-dockerized && docker compose exec -T rspamd-mailcow rspamadm dkim_keygen -d ${dkimDomain} -s dkim`;
         conn.exec(cmd, (err, stream) => {
           if (err) return reject(err);
           let out = "";
@@ -73,14 +63,26 @@ function fetchDkimViaSsh(env) {
         });
       })
       .on("error", reject)
-      .connect({
-        host: env.VPS_IP,
-        port: 22,
-        username: env.VPS_USER || "root",
-        password: env.VPS_SSH_PASS,
-        readyTimeout: 60000,
-      });
+      .connect(sshConnectOptions(env));
   });
+}
+
+async function publishDkim(env, zoneId, dkimDomain) {
+  console.log(`==> DKIM: ${dkimDomain}`);
+  const raw = await fetchDkimViaSsh(env, dkimDomain);
+  const dkim = parseDkimTxt(raw);
+  if (!dkim) {
+    console.error(`DKIM não encontrado para ${dkimDomain}`);
+    return false;
+  }
+  await upsertRecord(
+    env.CLOUDFLARE_API_TOKEN,
+    zoneId,
+    "TXT",
+    `dkim._domainkey.${dkimDomain}`,
+    dkim
+  );
+  return true;
 }
 
 function parseDkimTxt(raw) {
@@ -92,7 +94,7 @@ function parseDkimTxt(raw) {
   return single ? single[1].replace(/\s+/g, "") : null;
 }
 
-const env = loadEnv();
+const env = loadEnv(envPath);
 const {
   CLOUDFLARE_API_TOKEN,
   CLOUDFLARE_ZONE_ID,
@@ -112,6 +114,8 @@ const domain =
     ? MAILCOW_HOSTNAME.split(".").slice(-3).join(".")
     : MAILCOW_HOSTNAME.split(".").slice(-2).join("."));
 const mailHost = MAILCOW_HOSTNAME;
+const extraDomain = env.EXTRA_MAIL_DOMAIN;
+const extraZoneId = env.EXTRA_CLOUDFLARE_ZONE_ID;
 
 console.log(`==> DNS Cloudflare: ${domain}`);
 console.log(`    hostname mail: ${mailHost}`);
@@ -150,25 +154,29 @@ await upsertRecord(
   "v=DMARC1; p=quarantine; rua=mailto:postmaster@" + domain
 );
 
-if (withDkim) {
-  if (!env.VPS_SSH_PASS) {
-    console.error("VPS_SSH_PASS necessário para --dkim");
-    process.exit(1);
-  }
-  console.log("==> Buscando DKIM no VPS...");
-  const raw = await fetchDkimViaSsh(env);
-  const dkim = parseDkimTxt(raw);
-  if (!dkim) {
-    console.error("DKIM não encontrado. Aguarde o Mailcow inicializar e tente de novo.");
-    process.exit(1);
-  }
+if (extraDomain && extraZoneId) {
+  console.log(`\n==> DNS secundário: ${extraDomain} -> ${mailHost}`);
+  await upsertRecord(CLOUDFLARE_API_TOKEN, extraZoneId, "MX", extraDomain, mailHost, {
+    priority: 10,
+  });
   await upsertRecord(
     CLOUDFLARE_API_TOKEN,
-    CLOUDFLARE_ZONE_ID,
+    extraZoneId,
     "TXT",
-    `dkim._domainkey.${domain}`,
-    dkim
+    extraDomain,
+    `v=spf1 mx a:${mailHost} ip4:${VPS_IP} ~all`
   );
+}
+
+if (withDkim) {
+  if (!env.VPS_SSH_PASS && !process.env.VPS_SSH_KEY) {
+    console.error("VPS_SSH_PASS ou VPS_SSH_KEY necessário para --dkim");
+    process.exit(1);
+  }
+  await publishDkim(env, CLOUDFLARE_ZONE_ID, domain);
+  if (extraDomain && extraZoneId) {
+    await publishDkim(env, extraZoneId, extraDomain);
+  }
 }
 
 console.log("\nDNS base configurado.");

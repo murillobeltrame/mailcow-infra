@@ -1,0 +1,309 @@
+/* Nive Sistemas — identidade visual Mailcow (0081-custom-mailcow.css) */
+
+:root {
+  --nive-primary: #22578d;
+  --nive-primary-hover: #1a4f7a;
+  --nive-secondary: #071836;
+  --nive-sidebar: #1e293b;
+  --nive-sidebar-border: #334155;
+  --nive-bg: #f1f5f9;
+  --nive-surface: #ffffff;
+  --nive-border: #e2e8f0;
+  --nive-text: #0f172a;
+  --nive-muted: #64748b;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif !important;
+}
+
+meta[name="theme-color"],
+head meta[name="theme-color"] {
+  /* sobrescrito via JS abaixo quando possível */
+}
+
+/* ── Login (admin, usuário, domainadmin) ── */
+body:has(.mailcow-logo),
+body:not(:has(nav.navbar)) {
+  min-height: 100vh;
+  background: var(--nive-bg) !important;
+  color: var(--nive-text);
+}
+
+body:has(.mailcow-logo) .overlay,
+body:not(:has(nav.navbar)) .overlay {
+  display: none !important;
+}
+
+@media (min-width: 992px) {
+  body:has(.mailcow-logo)::before,
+  body:not(:has(nav.navbar))::before {
+    content: "";
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 16rem;
+    background: var(--nive-sidebar);
+    border-right: 1px solid var(--nive-sidebar-border);
+    z-index: 0;
+  }
+
+  body:has(.mailcow-logo)::after,
+  body:not(:has(nav.navbar))::after {
+    content: "";
+    position: fixed;
+    top: 1.75rem;
+    left: 1.5rem;
+    width: 13rem;
+    height: 18rem;
+    background: url("/img/nive-sidebar-brand.svg") no-repeat left top / contain;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  body:has(.mailcow-logo) .row.mb-4,
+  body:not(:has(nav.navbar)) .row.mb-4 {
+    margin-left: 16rem !important;
+    width: calc(100% - 16rem);
+    min-height: 100vh;
+    align-items: center;
+    margin-top: 0 !important;
+    position: relative;
+    z-index: 2;
+  }
+}
+
+body:not(:has(nav.navbar)) .row.mb-4 > [class*="col-"] {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body:not(:has(nav.navbar)) .card {
+  border: 1px solid var(--nive-border) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04) !important;
+  overflow: hidden;
+}
+
+body:not(:has(nav.navbar)) .card-header {
+  background: var(--nive-surface) !important;
+  border-bottom: 1px solid var(--nive-border) !important;
+  color: var(--nive-text) !important;
+  font-weight: 600;
+}
+
+body:not(:has(nav.navbar)) .card-body {
+  background: var(--nive-surface) !important;
+}
+
+body:not(:has(nav.navbar)) .mailcow-logo .main-logo {
+  display: inline-block !important;
+  max-height: 52px;
+  width: auto;
+}
+
+body:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark {
+  display: none !important;
+}
+
+body:not(:has(nav.navbar)) .form-control {
+  background: #ffffff !important;
+  color: var(--nive-text) !important;
+  border-color: #cbd5e1 !important;
+  border-radius: 0.375rem;
+}
+
+body:not(:has(nav.navbar)) .form-control:focus {
+  border-color: var(--nive-primary);
+  box-shadow: 0 0 0 3px rgb(34 87 141 / 0.14);
+}
+
+body:not(:has(nav.navbar)) .input-group-text {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--nive-muted);
+}
+
+body:not(:has(nav.navbar)) .text-muted {
+  color: var(--nive-muted) !important;
+}
+
+body:not(:has(nav.navbar)) legend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nive-muted);
+}
+
+/* ── Botões ── */
+.btn-success,
+.btn-success:focus {
+  background-color: var(--nive-primary) !important;
+  border-color: var(--nive-primary) !important;
+  color: #fff !important;
+}
+
+.btn-success:hover,
+.btn-success:active {
+  background-color: var(--nive-primary-hover) !important;
+  border-color: var(--nive-primary-hover) !important;
+}
+
+.btn-primary,
+.btn-primary:focus {
+  background-color: var(--nive-primary) !important;
+  border-color: var(--nive-primary) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:active {
+  background-color: var(--nive-primary-hover) !important;
+  border-color: var(--nive-primary-hover) !important;
+}
+
+.btn-secondary {
+  border-color: var(--nive-border) !important;
+  color: #334155 !important;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: var(--nive-text) !important;
+}
+
+/* ── Navbar autenticada ── */
+nav.navbar {
+  background: var(--nive-sidebar) !important;
+  border-bottom: 1px solid var(--nive-sidebar-border) !important;
+  box-shadow: none !important;
+}
+
+nav.navbar.navbar-light {
+  background: var(--nive-sidebar) !important;
+}
+
+nav.navbar .navbar-brand .main-logo {
+  max-height: 34px;
+}
+
+nav.navbar .navbar-brand .main-logo-dark {
+  display: inline-block !important;
+  max-height: 34px;
+}
+
+nav.navbar .navbar-brand .main-logo:not(.main-logo-dark) {
+  display: none !important;
+}
+
+nav.navbar .nav-link,
+nav.navbar .navbar-brand,
+nav.navbar .dropdown-toggle {
+  color: #e2e8f0 !important;
+}
+
+nav.navbar .nav-link:hover,
+nav.navbar .dropdown-toggle:hover {
+  color: #ffffff !important;
+}
+
+nav.navbar .dropdown-menu {
+  border-color: var(--nive-border);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.12);
+}
+
+nav.navbar .form-check-label {
+  color: #cbd5e1 !important;
+}
+
+/* ── Abas e painel interno ── */
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+  color: var(--nive-primary) !important;
+  border-color: var(--nive-border) var(--nive-border) var(--nive-surface) !important;
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--nive-primary-hover) !important;
+}
+
+.card-header:not(body:not(:has(nav.navbar)) .card-header) {
+  background: #f8fafc !important;
+}
+
+.page-header,
+legend {
+  color: var(--nive-text);
+}
+
+/* ── Dark mode Mailcow → manter identidade Nive ── */
+html.dark-mode body:not(:has(nav.navbar)),
+body.dark-mode:not(:has(nav.navbar)) {
+  background: var(--nive-bg) !important;
+}
+
+html.dark-mode body:not(:has(nav.navbar))::before,
+body.dark-mode:not(:has(nav.navbar))::before {
+  background: var(--nive-sidebar) !important;
+}
+
+html.dark-mode body:not(:has(nav.navbar)) .card,
+body.dark-mode:not(:has(nav.navbar)) .card,
+html.dark-mode body:not(:has(nav.navbar)) .card-header,
+html.dark-mode body:not(:has(nav.navbar)) .card-body,
+body.dark-mode:not(:has(nav.navbar)) .card-header,
+body.dark-mode:not(:has(nav.navbar)) .card-body {
+  background: var(--nive-surface) !important;
+  border-color: var(--nive-border) !important;
+  color: var(--nive-text) !important;
+}
+
+html.dark-mode body:not(:has(nav.navbar)) .form-control,
+body.dark-mode:not(:has(nav.navbar)) .form-control {
+  background: #ffffff !important;
+  color: var(--nive-text) !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.dark-mode body:not(:has(nav.navbar)) .input-group-text,
+body.dark-mode:not(:has(nav.navbar)) .input-group-text {
+  background: #f8fafc !important;
+  color: var(--nive-muted) !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo,
+body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo {
+  display: inline-block !important;
+}
+
+html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark,
+body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark {
+  display: none !important;
+}
+
+html.dark-mode nav.navbar,
+body.dark-mode nav.navbar {
+  background: var(--nive-sidebar) !important;
+}
+
+/* ── Links ── */
+a:not(.btn) {
+  color: var(--nive-primary);
+}
+
+a:not(.btn):hover {
+  color: var(--nive-primary-hover);
+}
+
+/* ── Footer UI customizado ── */
+.footer,
+.ui-footer {
+  color: var(--nive-muted);
+}
