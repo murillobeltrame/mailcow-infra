@@ -31,4 +31,5 @@ done
 echo "==> Mailboxes:"
 curl -sk "https://127.0.0.1/api/v1/get/mailbox/all" \
   -H "Host: ${MAILCOW_HOSTNAME}" \
-  -H "X-API-Key: $(grep '^API_KEY=' mailcow.conf | cut -d= -f2- | tr -d '\r')" | head -c 3000
+  -H "X-API-Key: $(grep '^API_KEY=' mailcow.conf | cut -d= -f2- | tr -d '\r')" \
+  | head -c 3000 || true

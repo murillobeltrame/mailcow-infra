@@ -39,7 +39,7 @@ add_postmaster() {
 }
 
 echo "==> Domínios atuais:"
-api GET get/domain/all | head -c 2000
+api GET get/domain/all | head -c 2000 || true
 echo ""
 
 for d in "${MAIL_DOMAIN}" "${EXTRA_MAIL_DOMAIN}"; do
