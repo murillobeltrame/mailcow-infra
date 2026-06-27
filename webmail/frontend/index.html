@@ -8,6 +8,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Nive Mail</title>
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem("nive-mail-theme");
+          var dark =
+            m === "dark" ||
+            (m !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

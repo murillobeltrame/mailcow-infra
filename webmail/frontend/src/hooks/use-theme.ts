@@ -1,15 +1,36 @@
 import { useEffect, useState } from "react";
+import {
+  applyTheme,
+  getStoredTheme,
+  persistTheme,
+  resolveDark,
+  subscribeSystemTheme,
+  type ThemeMode,
+} from "@/lib/theme";
 
 export function useTheme() {
-  const [dark, setDark] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("nive-mail-theme") === "dark";
-  });
+  const [mode, setMode] = useState<ThemeMode>(() => getStoredTheme());
+  const dark = resolveDark(mode);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("nive-mail-theme", dark ? "dark" : "light");
-  }, [dark]);
+    applyTheme(dark);
+    persistTheme(mode);
+  }, [dark, mode]);
 
-  return { dark, toggle: () => setDark((d) => !d) };
+  useEffect(() => {
+    if (mode !== "system") return;
+    return subscribeSystemTheme((isDark) => applyTheme(isDark));
+  }, [mode]);
+
+  return {
+    dark,
+    mode,
+    toggle: () => {
+      setMode((current) => {
+        const isDark = resolveDark(current);
+        return isDark ? "light" : "dark";
+      });
+    },
+    setMode,
+  };
 }

@@ -590,12 +590,19 @@ a:not(.btn):hover {
   padding: var(--space-4) 0;
 }
 
-/* ── 15. Dark mode ── */
+/* ── 15. Dark mode (Mailcow usa html.dark-mode / body.dark-mode) ── */
+html.dark-mode,
+body.dark-mode {
+  color-scheme: dark;
+}
+
+/* Login — mantém card claro */
 html.dark-mode body:has(.mailcow-logo),
 html.dark-mode body:not(:has(nav.navbar)),
 body.dark-mode:has(.mailcow-logo),
 body.dark-mode:not(:has(nav.navbar)) {
   background: var(--nive-bg) !important;
+  color: var(--nive-text) !important;
 }
 
 html.dark-mode body:has(.mailcow-logo)::before,
@@ -605,42 +612,6 @@ body.dark-mode:not(:has(nav.navbar))::before {
   background: var(--nive-sidebar) !important;
 }
 
-html.dark-mode body:has(nav.navbar),
-body.dark-mode:has(nav.navbar) {
-  background: #0f172a !important;
-}
-
-html.dark-mode body:has(nav.navbar) .card,
-body.dark-mode:has(nav.navbar) .card {
-  background: #1e293b;
-  border-color: var(--nive-sidebar-border) !important;
-  color: var(--nive-text-on-dark);
-}
-
-html.dark-mode body:has(nav.navbar) .card-header,
-body.dark-mode:has(nav.navbar) .card-header {
-  background: #334155 !important;
-  border-color: var(--nive-sidebar-border) !important;
-  color: var(--nive-text-on-dark) !important;
-}
-
-html.dark-mode body:has(nav.navbar) .table,
-body.dark-mode:has(nav.navbar) .table {
-  color: var(--nive-text-on-dark);
-}
-
-html.dark-mode body:has(nav.navbar) .table thead th,
-body.dark-mode:has(nav.navbar) .table thead th {
-  background: #334155 !important;
-  color: var(--nive-text-on-dark) !important;
-}
-
-html.dark-mode nav.navbar,
-body.dark-mode nav.navbar {
-  background: var(--nive-sidebar) !important;
-}
-
-/* Login: card claro intencional (contraste com sidebar escura) */
 html.dark-mode body:has(.mailcow-logo) .card,
 html.dark-mode body:not(:has(nav.navbar)) .card,
 body.dark-mode:has(.mailcow-logo) .card,
@@ -670,6 +641,259 @@ html.dark-mode body:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark,
 body.dark-mode:has(.mailcow-logo) .mailcow-logo .main-logo-dark,
 body.dark-mode:not(:has(nav.navbar)) .mailcow-logo .main-logo-dark {
   display: none !important;
+}
+
+/* Painel autenticado (user + admin) — tema escuro completo */
+html.dark-mode body:has(nav.navbar),
+body.dark-mode:has(nav.navbar) {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .container-fluid,
+html.dark-mode body:has(nav.navbar) .tab-content,
+html.dark-mode body:has(nav.navbar) .tab-pane,
+body.dark-mode:has(nav.navbar) .container-fluid,
+body.dark-mode:has(nav.navbar) .tab-content,
+body.dark-mode:has(nav.navbar) .tab-pane {
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .page-header,
+html.dark-mode body:has(nav.navbar) legend,
+html.dark-mode body:has(nav.navbar) label,
+html.dark-mode body:has(nav.navbar) .form-label,
+html.dark-mode body:has(nav.navbar) p,
+html.dark-mode body:has(nav.navbar) li,
+html.dark-mode body:has(nav.navbar) td,
+html.dark-mode body:has(nav.navbar) th,
+body.dark-mode:has(nav.navbar) .page-header,
+body.dark-mode:has(nav.navbar) legend,
+body.dark-mode:has(nav.navbar) label,
+body.dark-mode:has(nav.navbar) .form-label,
+body.dark-mode:has(nav.navbar) p,
+body.dark-mode:has(nav.navbar) li,
+body.dark-mode:has(nav.navbar) td,
+body.dark-mode:has(nav.navbar) th {
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .text-muted,
+html.dark-mode body:has(nav.navbar) .text-secondary,
+html.dark-mode body:has(nav.navbar) small,
+body.dark-mode:has(nav.navbar) .text-muted,
+body.dark-mode:has(nav.navbar) .text-secondary,
+body.dark-mode:has(nav.navbar) small {
+  color: #94a3b8 !important;
+}
+
+html.dark-mode nav.navbar,
+body.dark-mode nav.navbar {
+  background: var(--nive-sidebar) !important;
+}
+
+html.dark-mode body:has(nav.navbar) .card,
+body.dark-mode:has(nav.navbar) .card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .card-header,
+body.dark-mode:has(nav.navbar) .card-header {
+  background: #334155 !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .card-body,
+body.dark-mode:has(nav.navbar) .card-body {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .card-footer,
+body.dark-mode:has(nav.navbar) .card-footer {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .nav-tabs,
+body.dark-mode:has(nav.navbar) .nav-tabs {
+  border-color: #334155 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .nav-tabs .nav-link,
+body.dark-mode:has(nav.navbar) .nav-tabs .nav-link {
+  color: #94a3b8 !important;
+  border-color: transparent !important;
+}
+
+html.dark-mode body:has(nav.navbar) .nav-tabs .nav-link:hover,
+body.dark-mode:has(nav.navbar) .nav-tabs .nav-link:hover {
+  color: #e2e8f0 !important;
+  border-color: #334155 #334155 transparent !important;
+}
+
+html.dark-mode body:has(nav.navbar) .nav-tabs .nav-link.active,
+html.dark-mode body:has(nav.navbar) .nav-tabs .nav-item.show .nav-link,
+body.dark-mode:has(nav.navbar) .nav-tabs .nav-link.active,
+body.dark-mode:has(nav.navbar) .nav-tabs .nav-item.show .nav-link {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 #334155 #1e293b !important;
+}
+
+html.dark-mode body:has(nav.navbar) .form-control,
+html.dark-mode body:has(nav.navbar) .form-select,
+html.dark-mode body:has(nav.navbar) .input-group-text,
+body.dark-mode:has(nav.navbar) .form-control,
+body.dark-mode:has(nav.navbar) .form-select,
+body.dark-mode:has(nav.navbar) .input-group-text {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .form-control:focus,
+html.dark-mode body:has(nav.navbar) .form-select:focus,
+body.dark-mode:has(nav.navbar) .form-control:focus,
+body.dark-mode:has(nav.navbar) .form-select:focus {
+  border-color: var(--nive-primary) !important;
+  box-shadow: 0 0 0 3px rgb(34 87 141 / 0.25) !important;
+}
+
+html.dark-mode body:has(nav.navbar) .form-control::placeholder,
+body.dark-mode:has(nav.navbar) .form-control::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .btn-secondary,
+body.dark-mode:has(nav.navbar) .btn-secondary {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .btn-outline-secondary,
+body.dark-mode:has(nav.navbar) .btn-outline-secondary {
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .btn-light,
+body.dark-mode:has(nav.navbar) .btn-light {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .table,
+body.dark-mode:has(nav.navbar) .table {
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .table thead th,
+html.dark-mode body:has(nav.navbar) .table-light th,
+body.dark-mode:has(nav.navbar) .table thead th,
+body.dark-mode:has(nav.navbar) .table-light th {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .table-striped > tbody > tr:nth-of-type(odd) > *,
+body.dark-mode:has(nav.navbar) .table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: rgb(51 65 85 / 0.45) !important;
+}
+
+html.dark-mode body:has(nav.navbar) .table-hover > tbody > tr:hover > *,
+body.dark-mode:has(nav.navbar) .table-hover > tbody > tr:hover > * {
+  background-color: rgb(34 87 141 / 0.18) !important;
+}
+
+html.dark-mode body:has(nav.navbar) .list-group-item,
+body.dark-mode:has(nav.navbar) .list-group-item {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .list-group-item-action:hover,
+body.dark-mode:has(nav.navbar) .list-group-item-action:hover {
+  background: #334155 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .progress,
+body.dark-mode:has(nav.navbar) .progress {
+  background: #334155 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .dropdown-menu,
+body.dark-mode:has(nav.navbar) .dropdown-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .dropdown-item,
+body.dark-mode:has(nav.navbar) .dropdown-item {
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .dropdown-item:hover,
+html.dark-mode body:has(nav.navbar) .dropdown-item:focus,
+body.dark-mode:has(nav.navbar) .dropdown-item:hover,
+body.dark-mode:has(nav.navbar) .dropdown-item:focus {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark-mode body:has(nav.navbar) a:not(.btn),
+body.dark-mode:has(nav.navbar) a:not(.btn) {
+  color: #7cb3e9 !important;
+}
+
+html.dark-mode body:has(nav.navbar) a:not(.btn):hover,
+body.dark-mode:has(nav.navbar) a:not(.btn):hover {
+  color: #a5d0ff !important;
+}
+
+html.dark-mode body:has(nav.navbar) hr,
+body.dark-mode:has(nav.navbar) hr {
+  border-color: #334155 !important;
+  opacity: 1;
+}
+
+html.dark-mode body:has(nav.navbar) pre,
+html.dark-mode body:has(nav.navbar) code,
+body.dark-mode:has(nav.navbar) pre,
+body.dark-mode:has(nav.navbar) code {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .alert,
+body.dark-mode:has(nav.navbar) .alert {
+  border-color: #475569 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .modal-content,
+body.dark-mode:has(nav.navbar) .modal-content {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark-mode body:has(nav.navbar) .modal-header,
+html.dark-mode body:has(nav.navbar) .modal-footer,
+body.dark-mode:has(nav.navbar) .modal-header,
+body.dark-mode:has(nav.navbar) .modal-footer {
+  background: #334155 !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
 }
 
 /* ── 16. Acessibilidade ── */

@@ -1,36 +1,35 @@
 import { cn } from "@/lib/utils";
 
-type BrandLogoProps = {
-  size?: "sm" | "md" | "lg";
-  showText?: boolean;
+type BrandMarkProps = {
   className?: string;
+  size?: "sm" | "md" | "lg";
 };
 
-const sizes = {
-  sm: { box: "h-8 w-8 text-sm", title: "text-sm" },
-  md: { box: "h-9 w-9 text-sm", title: "text-sm" },
-  lg: { box: "h-11 w-11 text-lg", title: "text-lg" },
-};
+const sizes = { sm: "h-8 w-8 text-xs", md: "h-10 w-10 text-sm", lg: "h-12 w-12 text-base" };
 
-export function BrandLogo({ size = "md", showText = true, className }: BrandLogoProps) {
-  const s = sizes[size];
+export function BrandMark({ className, size = "md" }: BrandMarkProps) {
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground shadow-sm",
+        sizes[size],
+        className
+      )}
+      aria-hidden
+    >
+      N
+    </div>
+  );
+}
 
+export function BrandLogo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div
-        className={cn(
-          "flex shrink-0 items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground",
-          s.box
-        )}
-      >
-        N
+      <BrandMark size="md" />
+      <div>
+        <p className="text-sm font-semibold leading-none">Nive Mail</p>
+        <p className="mt-1 text-xs text-muted-foreground">Webmail</p>
       </div>
-      {showText && (
-        <div className="min-w-0">
-          <p className={cn("truncate font-semibold leading-tight", s.title)}>Nive Mail</p>
-          {size === "lg" && <p className="text-sm text-sidebar-muted">E-mail profissional</p>}
-        </div>
-      )}
     </div>
   );
 }

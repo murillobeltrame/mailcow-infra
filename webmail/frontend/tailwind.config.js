@@ -17,14 +17,6 @@ export default {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
-          foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
-          foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
-        },
         muted: {
           DEFAULT: "hsl(var(--muted) / <alpha-value>)",
           foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
@@ -33,14 +25,13 @@ export default {
           DEFAULT: "hsl(var(--accent) / <alpha-value>)",
           foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
         },
-        card: {
-          DEFAULT: "hsl(var(--card) / <alpha-value>)",
-          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
+        destructive: {
+          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+          foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar) / <alpha-value>)",
-          foreground: "hsl(var(--sidebar-foreground) / <alpha-value>)",
-          muted: "hsl(var(--sidebar-muted) / <alpha-value>)",
+        surface: {
+          DEFAULT: "hsl(var(--surface) / <alpha-value>)",
+          foreground: "hsl(var(--surface-foreground) / <alpha-value>)",
         },
       },
       borderRadius: {
@@ -48,19 +39,25 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
         xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       boxShadow: {
-        card: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
-        elevated: "0 10px 40px -10px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.08)",
+        soft: "0 2px 8px -2px rgb(0 0 0 / 0.08), 0 4px 16px -4px rgb(0 0 0 / 0.06)",
+        float: "0 8px 32px -4px rgb(0 0 0 / 0.12), 0 4px 12px -2px rgb(0 0 0 / 0.06)",
       },
       keyframes: {
-        "fade-in": {
-          from: { opacity: "0", transform: "translateY(4px)" },
+        "slide-in-right": {
+          from: { transform: "translateX(100%)" },
+          to: { transform: "translateX(0)" },
+        },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
-        "fade-in": "fade-in 0.25s ease-out",
+        "slide-in-right": "slide-in-right 0.25s ease-out",
+        "fade-up": "fade-up 0.3s ease-out",
       },
     },
   },
