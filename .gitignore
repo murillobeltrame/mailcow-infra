@@ -1,0 +1,4 @@
+deploy/.env.deploy
+deploy/node_modules/
+*.log
+.DS_Store
