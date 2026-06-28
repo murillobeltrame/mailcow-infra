@@ -36,7 +36,7 @@ export function FolderRail({
       )}
       aria-label="Pastas"
     >
-      <BrandMark size="sm" className="mb-4 hidden shrink-0 md:block" />
+      <BrandMark size="md" variant="soft" className="mb-4 hidden shrink-0 md:block" />
 
       <button
         type="button"
