@@ -20,14 +20,10 @@ export type PortalSession = {
 export type MailSession = PortalSession & { email: string; password: string };
 
 const SESSION_VERSION = "v1";
+const sessions = new Map<string, PortalSession>();
 
-function sealSession(session: PortalSession, secret: string): string {
-  const payload = Buffer.from(JSON.stringify({ v: SESSION_VERSION, s: session })).toString("base64url");
-  const sig = createHmac("sha256", secret).update(payload).digest("base64url");
-  return `${payload}.${sig}`;
-}
-
-function unsealSession(token: string, secret: string): PortalSession | null {
+/** Token legado (cookie stateless com senha embutida) — compatibilidade temporária. */
+function unsealLegacyToken(token: string, secret: string): PortalSession | null {
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return null;
   const payload = token.slice(0, dot);
@@ -53,31 +49,66 @@ function unsealSession(token: string, secret: string): PortalSession | null {
   }
 }
 
+function persistSession(session: PortalSession) {
+  sessions.set(session.id, session);
+}
+
 export function createSession(
   data: Omit<PortalSession, "id" | "expiresAt">,
   ttlMs = 8 * 60 * 60 * 1000,
 ): PortalSession {
-  return {
+  const session: PortalSession = {
     ...data,
     id: randomUUID(),
     expiresAt: Date.now() + ttlMs,
   };
+  persistSession(session);
+  return session;
 }
 
-export function parseSessionToken(token: string | undefined): PortalSession | null {
-  if (!token) return null;
-  return unsealSession(token, config.cookieSecret);
+export function getSession(id: string | undefined): PortalSession | null {
+  if (!id) return null;
+  const session = sessions.get(id);
+  if (!session) return null;
+  if (session.expiresAt < Date.now()) {
+    sessions.delete(id);
+    return null;
+  }
+  return session;
 }
 
-export function sessionToToken(session: PortalSession): string {
-  return sealSession(session, config.cookieSecret);
+export function destroySession(id: string | undefined) {
+  if (id) sessions.delete(id);
+}
+
+/** Resolve sessão a partir do valor do cookie (UUID ou token legado). */
+export function resolveSessionFromCookie(value: string | undefined): PortalSession | null {
+  if (!value) return null;
+
+  const fromStore = getSession(value);
+  if (fromStore) return fromStore;
+
+  const legacy = unsealLegacyToken(value, config.cookieSecret);
+  if (!legacy) return null;
+
+  persistSession(legacy);
+  return legacy;
 }
 
 export function touchSession(session: PortalSession, ttlMs: number): PortalSession {
-  return { ...session, expiresAt: Date.now() + ttlMs };
+  session.expiresAt = Date.now() + ttlMs;
+  persistSession(session);
+  return session;
 }
 
 export function asMailSession(session: PortalSession): MailSession | null {
   if (session.role !== "user" || !session.email || !session.password) return null;
   return session as MailSession;
 }
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of sessions) {
+    if (session.expiresAt < now) sessions.delete(id);
+  }
+}, 60 * 60 * 1000).unref();

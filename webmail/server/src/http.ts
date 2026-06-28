@@ -1,6 +1,12 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "./config.js";
-import { parseSessionToken, sessionToToken, touchSession, type PortalSession, type UserRole } from "./session.js";
+import {
+  destroySession,
+  resolveSessionFromCookie,
+  touchSession,
+  type PortalSession,
+  type UserRole,
+} from "./session.js";
 
 const SESSION_REFRESHED = Symbol("sessionRefreshed");
 
@@ -36,7 +42,7 @@ export function getSessionCookieValue(request: FastifyRequest): string | undefin
 }
 
 export function getRequestSession(request: FastifyRequest): PortalSession | null {
-  return parseSessionToken(getSessionCookieValue(request));
+  return resolveSessionFromCookie(getSessionCookieValue(request));
 }
 
 export function requireSession(request: FastifyRequest): PortalSession {
@@ -73,7 +79,7 @@ export function requireRoleSession(request: FastifyRequest, ...roles: UserRole[]
 
 export function setSessionCookie(reply: FastifyReply, session: PortalSession) {
   const maxAge = Math.max(1, Math.floor((session.expiresAt - Date.now()) / 1000));
-  reply.setCookie(SESSION_COOKIE, sessionToToken(session), {
+  reply.setCookie(SESSION_COOKIE, session.id, {
     ...sessionCookieOptions(maxAge),
   });
 }
@@ -107,7 +113,13 @@ export function publicUser(session: PortalSession) {
 }
 
 /** Invalida sessão server-side e remove cookies do browser. */
-export function terminateSession(_request: FastifyRequest, reply: FastifyReply) {
+export function terminateSession(request: FastifyRequest, reply: FastifyReply) {
+  const session = getRequestSession(request);
+  if (session) {
+    destroySession(session.id);
+  } else {
+    destroySession(getSessionCookieValue(request));
+  }
   clearSessionCookie(reply);
   reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
   reply.header("Pragma", "no-cache");
