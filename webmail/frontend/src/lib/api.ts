@@ -80,10 +80,10 @@ export const api = {
     });
   },
   logout() {
-    return request<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
+    return request<{ ok: boolean }>("/api/auth/logout", { method: "POST", cache: "no-store" });
   },
   me() {
-    return request<User>("/api/auth/me");
+    return request<User>("/api/auth/me", { cache: "no-store" });
   },
   folders() {
     return request<{ folders: Folder[] }>("/api/folders");

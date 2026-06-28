@@ -7,6 +7,8 @@ import type { User } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
 import { mailKeys } from "@/lib/query-keys";
 
+const LOGIN_URL = `${import.meta.env.BASE_URL.replace(/\/?$/, "/")}login`;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -39,13 +41,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    queryClient.removeQueries({ queryKey: mailKeys.all });
+    setUser(null);
     try {
       await api.logout();
     } catch {
-      /* encerra sessão local mesmo se a API falhar */
+      /* mesmo com falha de rede, força saída no cliente */
     } finally {
-      queryClient.removeQueries({ queryKey: mailKeys.all });
-      setUser(null);
+      // Recarrega a página de login para garantir que o cookie expirado seja aplicado
+      window.location.replace(LOGIN_URL);
     }
   }, [queryClient]);
 

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -20,7 +20,6 @@ const nav: NavItem[] = [
 
 export function AppShell() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -30,7 +29,6 @@ export function AppShell() {
     try {
       await logout();
       toast.success("Sessão encerrada");
-      navigate("/login", { replace: true });
     } catch {
       toast.error("Erro ao sair");
     }

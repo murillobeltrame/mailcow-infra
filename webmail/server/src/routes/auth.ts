@@ -2,15 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { authenticateLogin } from "../auth-service.js";
 import { config } from "../config.js";
 import {
-  clearSessionCookie,
   getRequestSession,
   handleRouteError,
   publicUser,
   requireSession,
-  SESSION_COOKIE,
   setSessionCookie,
+  terminateSession,
 } from "../http.js";
-import { createSession, destroySession } from "../session.js";
+import { createSession } from "../session.js";
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post("/api/auth/login", async (request, reply) => {
@@ -68,14 +67,18 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post("/api/auth/logout", async (request, reply) => {
-    destroySession(request.cookies[SESSION_COOKIE]);
-    clearSessionCookie(reply);
+  const handleLogout = async (request: Parameters<typeof terminateSession>[0], reply: Parameters<typeof terminateSession>[1]) => {
+    terminateSession(request, reply);
     return { ok: true };
-  });
+  };
+
+  app.post("/api/auth/logout", async (request, reply) => handleLogout(request, reply));
+
+  app.get("/api/auth/logout", async (request, reply) => handleLogout(request, reply));
 
   app.get("/api/auth/me", async (request, reply) => {
     const session = getRequestSession(request);
+    reply.header("Cache-Control", "no-store");
     if (!session) return reply.status(401).send({ error: "Não autenticado" });
     return publicUser(session);
   });
