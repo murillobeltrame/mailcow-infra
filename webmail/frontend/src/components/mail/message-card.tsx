@@ -6,17 +6,31 @@ type MessageCardProps = {
   message: MessageSummary;
   selected: boolean;
   onSelect: () => void;
+  bulkMode?: boolean;
+  checked?: boolean;
+  onCheck?: (checked: boolean) => void;
 };
 
-export function MessageCard({ message, selected, onSelect }: MessageCardProps) {
+export function MessageCard({ message, selected, onSelect, bulkMode, checked, onCheck }: MessageCardProps) {
   const sender = message.fromName || message.from.split("@")[0];
 
   return (
+    <div className="flex items-start gap-1">
+      {bulkMode && (
+        <input
+          type="checkbox"
+          className="mt-3 shrink-0"
+          checked={checked}
+          onChange={(e) => onCheck?.(e.target.checked)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Selecionar ${message.subject}`}
+        />
+      )}
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "group w-full rounded-xl px-3 py-3 text-left transition-all",
+        "group flex-1 rounded-xl px-3 py-3 text-left transition-all",
         selected
           ? "bg-accent shadow-sm ring-1 ring-primary/20"
           : "hover:bg-muted/70",
@@ -56,5 +70,6 @@ export function MessageCard({ message, selected, onSelect }: MessageCardProps) {
         </div>
       </div>
     </button>
+    </div>
   );
 }

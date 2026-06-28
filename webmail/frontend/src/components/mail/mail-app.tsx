@@ -33,6 +33,26 @@ export function MailApp() {
     setComposeOpen(true);
   };
 
+  const openReplyAll = () => {
+    if (!mailbox.message || !user) return;
+    const self = user.email.toLowerCase();
+    const others = [
+      mailbox.message.from,
+      ...mailbox.message.to,
+      ...mailbox.message.cc,
+    ]
+      .map((e) => e.replace(/.*<([^>]+)>.*/, "$1").trim())
+      .filter((e) => e && !e.toLowerCase().includes(self));
+    const unique = [...new Set(others)];
+    setComposeDefaults({
+      to: unique[0] ?? mailbox.message.from,
+      cc: unique.slice(1).join(", ") || undefined,
+      subject: mailbox.message.subject,
+      mode: "reply-all",
+    });
+    setComposeOpen(true);
+  };
+
   const openForward = () => {
     if (!mailbox.message) return;
     const quoted = mailbox.message.text ?? mailbox.message.html?.replace(/<[^>]+>/g, "") ?? "";
@@ -124,6 +144,12 @@ export function MailApp() {
               hasMore={mailbox.hasMoreMessages}
               loadingMore={mailbox.messagesFetchingMore}
               onLoadMore={mailbox.loadMoreMessages}
+              bulkMode={mailbox.bulkMode}
+              selectedUids={mailbox.selectedUids}
+              onToggleBulkMode={mailbox.toggleBulkMode}
+              onToggleUid={mailbox.toggleUid}
+              onBulkDelete={mailbox.bulkDelete}
+              bulkDeleting={mailbox.bulkDeleting}
             />
             <ReadingPanel
               message={mailbox.message}
@@ -132,6 +158,7 @@ export function MailApp() {
               folder={mailbox.activeFolder}
               folders={mailbox.folders}
               onReply={openReply}
+              onReplyAll={openReplyAll}
               onForward={openForward}
               onDelete={() => {
                 if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
@@ -159,6 +186,7 @@ export function MailApp() {
                 showBack
                 onBack={() => mailbox.setSelectedUid(null)}
                 onReply={openReply}
+                onReplyAll={openReplyAll}
                 onForward={openForward}
                 onDelete={() => {
                   if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);

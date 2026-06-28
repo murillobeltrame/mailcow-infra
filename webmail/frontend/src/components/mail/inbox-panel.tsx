@@ -1,4 +1,4 @@
-import { Inbox, RefreshCw, Search } from "lucide-react";
+import { Inbox, RefreshCw, Search, Trash2 } from "lucide-react";
 import { MessageCard } from "@/components/mail/message-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,12 @@ type InboxPanelProps = {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  bulkMode?: boolean;
+  selectedUids?: Set<number>;
+  onToggleBulkMode?: () => void;
+  onToggleUid?: (uid: number, checked: boolean) => void;
+  onBulkDelete?: () => void;
+  bulkDeleting?: boolean;
 };
 
 export function InboxPanel({
@@ -35,6 +41,12 @@ export function InboxPanel({
   hasMore,
   loadingMore,
   onLoadMore,
+  bulkMode,
+  selectedUids,
+  onToggleBulkMode,
+  onToggleUid,
+  onBulkDelete,
+  bulkDeleting,
 }: InboxPanelProps) {
   return (
     <section className="mail-surface flex w-full shrink-0 flex-col md:w-[340px] lg:w-[380px]">
@@ -56,7 +68,29 @@ export function InboxPanel({
           >
             <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
           </Button>
+          {onToggleBulkMode && (
+            <Button
+              variant={bulkMode ? "default" : "outline"}
+              size="sm"
+              className="rounded-xl text-xs"
+              onClick={onToggleBulkMode}
+            >
+              Selecionar
+            </Button>
+          )}
         </div>
+        {bulkMode && selectedUids && selectedUids.size > 0 && onBulkDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="rounded-xl"
+            disabled={bulkDeleting}
+            onClick={onBulkDelete}
+          >
+            <Trash2 className="mr-1 h-4 w-4" />
+            Excluir ({selectedUids.size})
+          </Button>
+        )}
 
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -101,6 +135,9 @@ export function InboxPanel({
                 message={msg}
                 selected={selectedUid === msg.uid}
                 onSelect={() => onSelect(msg.uid)}
+                bulkMode={bulkMode}
+                checked={selectedUids?.has(msg.uid)}
+                onCheck={(checked) => onToggleUid?.(msg.uid, checked)}
               />
             ))}
             {hasMore && onLoadMore && (

@@ -1,12 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2, Users } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { asArray } from "@/lib/utils";
 
 export function ContactsPage() {
+  const qc = useQueryClient();
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
+  const [fn, setFn] = useState("");
+  const [email, setEmail] = useState("");
 
   const booksQuery = useQuery({
     queryKey: ["contacts", "books"],
@@ -19,8 +26,28 @@ export function ContactsPage() {
     enabled: !!selectedHref,
   });
 
+  const createContact = useMutation({
+    mutationFn: () => api.createContact(selectedHref!, fn.trim(), email.trim() || undefined),
+    onSuccess: () => {
+      toast.success("Contacto criado");
+      setFn("");
+      setEmail("");
+      qc.invalidateQueries({ queryKey: ["contacts", "list", selectedHref] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
+  const deleteContact = useMutation({
+    mutationFn: (path: string) => api.deleteContact(path),
+    onSuccess: () => {
+      toast.success("Contacto removido");
+      qc.invalidateQueries({ queryKey: ["contacts", "list", selectedHref] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
   const books = asArray<{ href: string; name: string }>(booksQuery.data);
-  const contacts = asArray<{ fn: string; email?: string }>(contactsQuery.data);
+  const contacts = asArray<{ fn: string; email?: string; path?: string }>(contactsQuery.data);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -55,20 +82,59 @@ export function ContactsPage() {
           <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
             {!selectedHref ? (
               <p className="text-sm text-muted-foreground">Selecione um livro</p>
-            ) : contactsQuery.isLoading ? (
-              <Skeleton className="h-48 w-full" />
             ) : (
-              <ul className="divide-y divide-border/60">
-                {contacts.map((c, i) => (
-                  <li key={i} className="flex items-center justify-between py-3">
-                    <span className="font-medium">{c.fn || "—"}</span>
-                    <span className="text-sm text-muted-foreground">{c.email ?? ""}</span>
-                  </li>
-                ))}
-                {contacts.length === 0 && (
-                  <p className="py-4 text-sm text-muted-foreground">Nenhum contacto</p>
+              <>
+                <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-fn">Nome</Label>
+                    <Input id="contact-fn" value={fn} onChange={(e) => setFn(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-email">E-mail</Label>
+                    <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Button
+                      className="rounded-xl"
+                      disabled={!fn.trim() || createContact.isPending}
+                      onClick={() => createContact.mutate()}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar contacto
+                    </Button>
+                  </div>
+                </div>
+                {contactsQuery.isLoading ? (
+                  <Skeleton className="h-48 w-full" />
+                ) : (
+                  <ul className="divide-y divide-border/60">
+                    {contacts.map((c, i) => (
+                      <li key={c.path ?? i} className="flex items-center justify-between py-3">
+                        <div>
+                          <span className="font-medium">{c.fn || "—"}</span>
+                          {c.email && (
+                            <span className="ml-2 text-sm text-muted-foreground">{c.email}</span>
+                          )}
+                        </div>
+                        {c.path && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg text-destructive"
+                            disabled={deleteContact.isPending}
+                            onClick={() => deleteContact.mutate(c.path!)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                    {contacts.length === 0 && (
+                      <p className="py-4 text-sm text-muted-foreground">Nenhum contacto</p>
+                    )}
+                  </ul>
                 )}
-              </ul>
+              </>
             )}
           </section>
         </div>

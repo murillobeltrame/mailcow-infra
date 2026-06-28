@@ -2,14 +2,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Cpu, HardDrive, Plus, Server, Shield, Timer, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  DomainManagePanel,
+  Fail2banPanel,
+  InfraPanel,
+  LogsPanel,
+  MailQueuePanel,
+  QuarantinePanel,
+} from "@/components/admin/admin-extra-sections";
+import { AliasListPanel } from "@/components/admin/alias-list-panel";
+import { MailboxListTable } from "@/components/admin/mailbox-list-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, api, type AdminDashboard, type DomainAdminRow, type MailboxRow } from "@/lib/api";
-import { MailboxListTable } from "@/components/admin/mailbox-list-table";
-import { asArray } from "@/lib/utils";
+import { asArray, cn } from "@/lib/utils";
 
 function StatCard({
   label,
@@ -40,8 +49,24 @@ function StatCard({
 
 type DomainRow = { domain_name?: string; active?: string };
 
+const ADMIN_TABS = [
+  { id: "overview", label: "Visão geral" },
+  { id: "domains", label: "Domínios" },
+  { id: "mailboxes", label: "Caixas" },
+  { id: "aliases", label: "Aliases" },
+  { id: "domain-admins", label: "Admins domínio" },
+  { id: "quarantine", label: "Quarentena" },
+  { id: "mailq", label: "Fila" },
+  { id: "infra", label: "Infra" },
+  { id: "logs", label: "Logs" },
+  { id: "security", label: "Segurança" },
+] as const;
+
+type AdminTab = (typeof ADMIN_TABS)[number]["id"];
+
 export function AdminPage() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<AdminTab>("overview");
   const [newDomain, setNewDomain] = useState("");
   const [mbDomain, setMbDomain] = useState("");
   const [localPart, setLocalPart] = useState("");
@@ -50,6 +75,7 @@ export function AdminPage() {
   const [daUsername, setDaUsername] = useState("");
   const [daPassword, setDaPassword] = useState("");
   const [daDomains, setDaDomains] = useState<string[]>([]);
+  const [aliasDomain, setAliasDomain] = useState("");
 
   const dashboardQuery = useQuery({
     queryKey: ["admin", "dashboard"],
@@ -153,7 +179,7 @@ export function AdminPage() {
   const mailboxes = asArray<MailboxRow>(mailboxesQuery.data);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Administração global</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -161,6 +187,26 @@ export function AdminPage() {
         </p>
       </div>
 
+      <nav className="flex flex-wrap gap-2 border-b border-border/60 pb-3">
+        {ADMIN_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-sm transition",
+              tab === t.id
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/40",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "overview" && (
+        <>
       {dashboardQuery.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -243,7 +289,11 @@ export function AdminPage() {
       ) : (
         <p className="text-sm text-destructive">Não foi possível carregar o status do servidor.</p>
       )}
+        </>
+      )}
 
+      {tab === "domains" && (
+        <>
       <section className="rounded-2xl border border-primary/30 bg-primary/5 p-6 shadow-soft">
         <h2 className="text-lg font-medium">Registrar novo domínio de e-mail</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -272,31 +322,17 @@ export function AdminPage() {
       </section>
 
       <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
-        <h2 className="mb-4 text-lg font-medium">Domínios existentes ({domains.length})</h2>
+        <h2 className="mb-4 text-lg font-medium">Gerenciar domínios ({domains.length})</h2>
         {domainsQuery.isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Domínio</th>
-                  <th className="pb-2 font-medium">Ativo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {domains.map((d) => (
-                  <tr key={d.domain_name} className="border-b border-border/40">
-                    <td className="py-2 pr-4">{d.domain_name}</td>
-                    <td className="py-2">{d.active === "1" ? "Sim" : "Não"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DomainManagePanel domains={domains} />
         )}
       </section>
+        </>
+      )}
 
+      {tab === "domain-admins" && (
       <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
         <div className="mb-4 flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -435,7 +471,9 @@ export function AdminPage() {
           )}
         </div>
       </section>
+      )}
 
+      {tab === "mailboxes" && (
       <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
         <h2 className="mb-2 text-lg font-medium">Nova caixa postal</h2>
         <p className="mb-4 text-sm text-muted-foreground">Crie mailboxes em qualquer domínio do servidor.</p>
@@ -495,6 +533,65 @@ export function AdminPage() {
           </div>
         )}
       </section>
+      )}
+
+      {tab === "aliases" && (
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Aliases de e-mail</h2>
+        <div className="mb-4 space-y-2">
+          <Label htmlFor="alias-domain">Domínio</Label>
+          <select
+            id="alias-domain"
+            className="w-full max-w-xs rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+            value={aliasDomain || mbDomain}
+            onChange={(e) => setAliasDomain(e.target.value)}
+          >
+            <option value="">Selecione…</option>
+            {domains.map((d) => (
+              <option key={d.domain_name} value={d.domain_name}>
+                {d.domain_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <AliasListPanel domain={aliasDomain || mbDomain} scope="admin" />
+      </section>
+      )}
+
+      {tab === "quarantine" && (
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Quarentena</h2>
+        <QuarantinePanel />
+      </section>
+      )}
+
+      {tab === "mailq" && (
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Fila de e-mail</h2>
+        <MailQueuePanel />
+      </section>
+      )}
+
+      {tab === "infra" && (
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Infraestrutura</h2>
+        <InfraPanel />
+      </section>
+      )}
+
+      {tab === "logs" && (
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Logs do sistema</h2>
+        <LogsPanel />
+      </section>
+      )}
+
+      {tab === "security" && (
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Segurança</h2>
+        <Fail2banPanel />
+      </section>
+      )}
     </div>
   );
 }

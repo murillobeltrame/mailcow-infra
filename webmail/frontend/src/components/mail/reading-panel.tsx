@@ -16,6 +16,7 @@ type ReadingPanelProps = {
   showBack?: boolean;
   onBack?: () => void;
   onReply: () => void;
+  onReplyAll?: () => void;
   onForward: () => void;
   onDelete: () => void;
   onToggleFlag?: (flagged: boolean) => void;
@@ -32,6 +33,7 @@ export function ReadingPanel({
   showBack,
   onBack,
   onReply,
+  onReplyAll,
   onForward,
   onDelete,
   onToggleFlag,
@@ -145,6 +147,12 @@ export function ReadingPanel({
               <Reply className="h-4 w-4" />
               Responder
             </Button>
+            {onReplyAll && (
+              <Button variant="outline" size="sm" className="rounded-xl" onClick={onReplyAll}>
+                <Reply className="h-4 w-4" />
+                Todos
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="rounded-xl" onClick={onForward}>
               <Forward className="h-4 w-4" />
               Encaminhar

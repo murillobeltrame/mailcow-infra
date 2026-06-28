@@ -15,6 +15,125 @@ import { ApiError, api, type MailboxProfile } from "@/lib/api";
 import { panelUrls } from "@/lib/panel-urls";
 import { asArray } from "@/lib/utils";
 
+function AccountExtrasSection() {
+  const qc = useQueryClient();
+  const [spamScore, setSpamScore] = useState("8,15");
+  const [aliasAddress, setAliasAddress] = useState("");
+  const [aliasGoto, setAliasGoto] = useState("");
+  const [aclSpamAlias, setAclSpamAlias] = useState(true);
+  const [aclSyncjobs, setAclSyncjobs] = useState(false);
+
+  const tlaQuery = useQuery({
+    queryKey: ["account", "time-limited-aliases"],
+    queryFn: () => api.timeLimitedAliases().then((r) => r.aliases),
+  });
+
+  const createTla = useMutation({
+    mutationFn: () =>
+      api.createTimeLimitedAlias({
+        address: aliasAddress.trim(),
+        goto: aliasGoto.trim(),
+      }),
+    onSuccess: () => {
+      toast.success("Alias temporário criado");
+      setAliasAddress("");
+      setAliasGoto("");
+      qc.invalidateQueries({ queryKey: ["account", "time-limited-aliases"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
+  const saveSpam = useMutation({
+    mutationFn: () => api.updateSpamScore(spamScore),
+    onSuccess: () => toast.success("Score de spam atualizado"),
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
+  const saveAcl = useMutation({
+    mutationFn: () =>
+      api.updateUserAcl({
+        spam_alias: aclSpamAlias ? "1" : "0",
+        syncjobs: aclSyncjobs ? "1" : "0",
+      }),
+    onSuccess: () => toast.success("Permissões atualizadas"),
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
+  const aliases = asArray<{ address?: string; goto?: string }>(tlaQuery.data);
+
+  return (
+    <>
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Aliases temporários</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="tla-address">Endereço</Label>
+            <Input id="tla-address" value={aliasAddress} onChange={(e) => setAliasAddress(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tla-goto">Encaminhar para</Label>
+            <Input id="tla-goto" value={aliasGoto} onChange={(e) => setAliasGoto(e.target.value)} />
+          </div>
+        </div>
+        <Button
+          className="mt-4 rounded-xl"
+          variant="secondary"
+          disabled={!aliasAddress.trim() || !aliasGoto.trim() || createTla.isPending}
+          onClick={() => createTla.mutate()}
+        >
+          Criar alias temporário
+        </Button>
+        {tlaQuery.isLoading ? (
+          <p className="mt-4 text-sm text-muted-foreground">Carregando…</p>
+        ) : aliases.length > 0 ? (
+          <ul className="mt-4 space-y-2 text-sm">
+            {aliases.map((a, i) => (
+              <li key={a.address ?? i} className="rounded-lg bg-muted/50 px-3 py-2">
+                {a.address} → {a.goto ?? "—"}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">Nenhum alias temporário.</p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Score de spam</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Formato Mailcow: limiar baixo,alto (ex.: 8,15).
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="spam-score">Score</Label>
+            <Input id="spam-score" value={spamScore} onChange={(e) => setSpamScore(e.target.value)} />
+          </div>
+          <Button className="rounded-xl" disabled={saveSpam.isPending} onClick={() => saveSpam.mutate()}>
+            Salvar
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+        <h2 className="mb-4 text-lg font-medium">Permissões da conta (ACL)</h2>
+        <div className="space-y-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={aclSpamAlias} onChange={(e) => setAclSpamAlias(e.target.checked)} />
+            Gerenciar aliases de spam
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={aclSyncjobs} onChange={(e) => setAclSyncjobs(e.target.checked)} />
+            Sync jobs
+          </label>
+        </div>
+        <Button className="mt-4 rounded-xl" disabled={saveAcl.isPending} onClick={() => saveAcl.mutate()}>
+          Salvar permissões
+        </Button>
+      </section>
+    </>
+  );
+}
+
 function formatQuota(profile: MailboxProfile): string {
   const used = profile.quota_used ?? 0;
   const quota = profile.quota ?? 0;
@@ -260,8 +379,10 @@ export function AccountPage() {
         )}
       </section>
 
+      <AccountExtrasSection />
+
       <p className="text-center text-xs text-muted-foreground">
-        Recursos avançados (FIDO2, TFA, aliases temporários) ainda disponíveis no painel legado{" "}
+        Recursos avançados (FIDO2, TFA) ainda disponíveis no painel legado{" "}
         <a href={panelUrls.user} className="text-primary underline-offset-2 hover:underline">
           /user
         </a>

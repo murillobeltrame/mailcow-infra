@@ -13,6 +13,8 @@ export function useMailbox() {
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedUids, setSelectedUids] = useState<Set<number>>(new Set());
 
   const foldersQuery = useQuery({
     queryKey: mailKeys.folders,
@@ -105,6 +107,37 @@ export function useMailbox() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (uids: number[]) => api.deleteMessages(activeFolder, uids),
+    onSuccess: () => {
+      toast.success("Mensagens excluídas");
+      setSelectedUids(new Set());
+      setBulkMode(false);
+      setSelectedUid(null);
+      invalidateMessages();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao excluir"),
+  });
+
+  const toggleBulkMode = useCallback(() => {
+    setBulkMode((v) => !v);
+    setSelectedUids(new Set());
+  }, []);
+
+  const toggleUid = useCallback((uid: number, checked: boolean) => {
+    setSelectedUids((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(uid);
+      else next.delete(uid);
+      return next;
+    });
+  }, []);
+
+  const bulkDelete = useCallback(() => {
+    const uids = [...selectedUids];
+    if (uids.length) bulkDeleteMutation.mutate(uids);
+  }, [selectedUids, bulkDeleteMutation]);
+
   const flagMutation = useMutation({
     mutationFn: ({ uid, flagged }: { uid: number; flagged: boolean }) =>
       api.toggleFlag(activeFolder, uid, flagged),
@@ -156,6 +189,12 @@ export function useMailbox() {
     markUnread: unreadMutation.mutate,
     moveMessage: moveMutation.mutate,
     isDeleting: deleteMutation.isPending,
+    bulkMode,
+    selectedUids,
+    toggleBulkMode,
+    toggleUid,
+    bulkDelete,
+    bulkDeleting: bulkDeleteMutation.isPending,
     foldersError: foldersQuery.error,
     messagesError: messagesQuery.error,
   };

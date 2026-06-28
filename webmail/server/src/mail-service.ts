@@ -328,7 +328,15 @@ async function appendToSentFolder(session: MailSession, raw: Buffer) {
 
 export async function sendMail(
   session: MailSession,
-  opts: { to: string; subject: string; body: string; cc?: string; bcc?: string; replyTo?: string }
+  opts: {
+    to: string;
+    subject: string;
+    body: string;
+    cc?: string;
+    bcc?: string;
+    replyTo?: string;
+    attachments?: { filename: string; content: Buffer; contentType?: string }[];
+  },
 ) {
   const mailOptions: nodemailer.SendMailOptions = {
     from: session.name ? `"${session.name}" <${session.email}>` : session.email,
@@ -339,6 +347,11 @@ export async function sendMail(
     subject: opts.subject,
     text: opts.body,
     html: opts.body.replace(/\n/g, "<br>"),
+    attachments: opts.attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+    })),
   };
 
   const raw = await buildMimeMessage(mailOptions);

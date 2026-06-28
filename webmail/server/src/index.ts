@@ -9,6 +9,7 @@ import { registerAdminRoutes, registerDomainRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerMailRoutes } from "./routes/mail.js";
+import { registerServiceRoutes } from "./routes/services.js";
 
 const app = Fastify({ logger: true });
 
@@ -22,6 +23,7 @@ await registerMailRoutes(app);
 await registerAccountRoutes(app);
 await registerAdminRoutes(app);
 await registerDomainRoutes(app);
+await registerServiceRoutes(app);
 await registerCalendarRoutes(app);
 
 const distPath = config.frontendDist;

@@ -1,4 +1,4 @@
-import { Loader2, Send, X } from "lucide-react";
+import { Loader2, Paperclip, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-export type ComposeMode = "new" | "reply" | "forward";
+export type ComposeMode = "new" | "reply" | "reply-all" | "forward";
 
 export type ComposeDefaults = {
   to?: string;
+  cc?: string;
   subject?: string;
   body?: string;
   mode?: ComposeMode;
@@ -42,17 +43,27 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
+  const [attachments, setAttachments] = useState<
+    { filename: string; contentBase64: string; contentType?: string }[]
+  >([]);
 
   const mode = defaults?.mode ?? (defaults?.to ? "reply" : "new");
 
   useEffect(() => {
     if (!open) return;
+    setAttachments([]);
     if (mode === "forward") {
       setTo("");
       setCc("");
       setBcc("");
       setSubject(defaults?.subject ? buildForwardSubject(defaults.subject) : "");
       setBody(defaults?.body ?? "");
+    } else if (mode === "reply-all") {
+      setTo(defaults?.to ?? "");
+      setCc(defaults?.cc ?? "");
+      setBcc("");
+      setSubject(defaults?.subject ? buildReplySubject(defaults.subject) : "");
+      setBody("");
     } else if (mode === "reply") {
       setTo(defaults?.to ?? "");
       setCc("");
@@ -66,7 +77,7 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
       setSubject(defaults?.subject ?? "");
       setBody(defaults?.body ?? "");
     }
-  }, [open, defaults?.to, defaults?.subject, defaults?.body, mode]);
+  }, [open, defaults?.to, defaults?.cc, defaults?.subject, defaults?.body, mode]);
 
   useEffect(() => {
     if (!open) return;
@@ -76,7 +87,31 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
   }, [open, onClose]);
 
   const title =
-    mode === "forward" ? "Encaminhar" : mode === "reply" ? "Responder" : "Nova mensagem";
+    mode === "forward"
+      ? "Encaminhar"
+      : mode === "reply-all"
+        ? "Responder a todos"
+        : mode === "reply"
+          ? "Responder"
+          : "Nova mensagem";
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const next: typeof attachments = [];
+    for (const file of Array.from(files)) {
+      const contentBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      next.push({ filename: file.name, contentBase64, contentType: file.type || undefined });
+    }
+    setAttachments((prev) => [...prev, ...next]);
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +127,7 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
         body,
         cc: cc.trim() || undefined,
         bcc: bcc.trim() || undefined,
+        attachments: attachments.length ? attachments : undefined,
       });
       toast.success("E-mail enviado");
       onClose();
@@ -167,6 +203,38 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
                 className="min-h-[240px] resize-none rounded-xl"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Anexos</Label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:bg-muted/40">
+                <Paperclip className="h-4 w-4" />
+                Adicionar arquivos
+                <input
+                  type="file"
+                  multiple
+                  className="sr-only"
+                  onChange={(e) => {
+                    void handleFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {attachments.length > 0 && (
+                <ul className="space-y-1 text-xs">
+                  {attachments.map((a, i) => (
+                    <li key={`${a.filename}-${i}`} className="flex items-center justify-between rounded-lg bg-muted/50 px-2 py-1">
+                      <span className="truncate">{a.filename}</span>
+                      <button
+                        type="button"
+                        className="text-destructive hover:underline"
+                        onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        Remover
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 

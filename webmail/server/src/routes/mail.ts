@@ -87,16 +87,23 @@ export async function registerMailRoutes(app: FastifyInstance) {
         body?: string;
         cc?: string;
         bcc?: string;
+        attachments?: { filename: string; contentBase64: string; contentType?: string }[];
       };
       if (!body.to?.trim() || !body.subject?.trim() || !body.body?.trim()) {
         return reply.status(400).send({ error: "Destinatário, assunto e mensagem são obrigatórios" });
       }
+      const attachments = body.attachments?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.contentBase64, "base64"),
+        contentType: a.contentType,
+      }));
       await sendMail(session, {
         to: body.to.trim(),
         subject: body.subject.trim(),
         body: body.body,
         cc: body.cc?.trim(),
         bcc: body.bcc?.trim(),
+        attachments,
       });
       return { ok: true };
     } catch (err) {

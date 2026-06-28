@@ -80,6 +80,22 @@ export type MailboxRow = {
   quota_used?: string;
 };
 
+export type AliasRow = {
+  address?: string;
+  goto?: string;
+  active?: string;
+  domain?: string;
+};
+
+export type QuarantineRow = {
+  id?: string | number;
+  sender?: string;
+  rcpt?: string;
+  subject?: string;
+  score?: number;
+  created?: number;
+};
+
 export type MailboxProfile = {
   username?: string;
   name?: string;
@@ -145,7 +161,14 @@ export const api = {
   attachmentUrl(folder: string, uid: number, index: number) {
     return apiUrl(`/api/messages/${uid}/attachments/${index}?folder=${encodeURIComponent(folder)}`);
   },
-  send(data: { to: string; subject: string; body: string; cc?: string; bcc?: string }) {
+  send(data: {
+    to: string;
+    subject: string;
+    body: string;
+    cc?: string;
+    bcc?: string;
+    attachments?: { filename: string; contentBase64: string; contentType?: string }[];
+  }) {
     return request<{ ok: boolean }>("/api/messages/send", {
       method: "POST",
       body: JSON.stringify(data),
@@ -348,7 +371,7 @@ export const api = {
     return request<{ calendars: { href: string; name: string }[] }>("/api/calendar/calendars");
   },
   calendarEvents(href: string) {
-    return request<{ events: { summary: string; raw: string }[] }>(
+    return request<{ events: { summary: string; raw: string; path?: string }[] }>(
       `/api/calendar/events?href=${encodeURIComponent(href)}`,
     );
   },
@@ -356,8 +379,144 @@ export const api = {
     return request<{ books: { href: string; name: string }[] }>("/api/contacts/books");
   },
   contacts(href: string) {
-    return request<{ contacts: { fn: string; email?: string }[] }>(
+    return request<{ contacts: { fn: string; email?: string; path?: string }[] }>(
       `/api/contacts/list?href=${encodeURIComponent(href)}`,
     );
+  },
+  /** Aliases */
+  adminAliases(domain?: string) {
+    const q = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+    return request<{ aliases: AliasRow[] }>(`/api/admin/aliases${q}`);
+  },
+  domainAliases(domain: string) {
+    return request<{ aliases: AliasRow[] }>(`/api/domain/aliases?domain=${encodeURIComponent(domain)}`);
+  },
+  adminCreateAlias(data: { address: string; goto: string; active?: string }) {
+    return request<{ ok: boolean }>("/api/admin/aliases", { method: "POST", body: JSON.stringify(data) });
+  },
+  domainCreateAlias(data: { address: string; goto: string; active?: string }) {
+    return request<{ ok: boolean }>("/api/domain/aliases", { method: "POST", body: JSON.stringify(data) });
+  },
+  adminUpdateAlias(data: Record<string, unknown>) {
+    return request<{ ok: boolean }>("/api/admin/aliases", { method: "PATCH", body: JSON.stringify(data) });
+  },
+  domainUpdateAlias(data: Record<string, unknown>) {
+    return request<{ ok: boolean }>("/api/domain/aliases", { method: "PATCH", body: JSON.stringify(data) });
+  },
+  adminDeleteAlias(address: string) {
+    return request<{ ok: boolean }>("/api/admin/aliases", {
+      method: "DELETE",
+      body: JSON.stringify({ address }),
+    });
+  },
+  domainDeleteAlias(address: string) {
+    return request<{ ok: boolean }>("/api/domain/aliases", {
+      method: "DELETE",
+      body: JSON.stringify({ address }),
+    });
+  },
+  /** Domains advanced */
+  adminUpdateDomain(data: Record<string, unknown>) {
+    return request<{ ok: boolean }>("/api/admin/domains", { method: "PATCH", body: JSON.stringify(data) });
+  },
+  adminDeleteDomain(domain: string) {
+    return request<{ ok: boolean }>("/api/admin/domains", {
+      method: "DELETE",
+      body: JSON.stringify({ domain }),
+    });
+  },
+  adminGetDomain(domain: string) {
+    return request<{ domain: unknown }>(`/api/admin/domains/${encodeURIComponent(domain)}`);
+  },
+  adminDkim(domain: string) {
+    return request<{ dkim: unknown }>(`/api/admin/dkim/${encodeURIComponent(domain)}`);
+  },
+  adminCreateDkim(data: Record<string, unknown>) {
+    return request<{ ok: boolean }>("/api/admin/dkim", { method: "POST", body: JSON.stringify(data) });
+  },
+  /** Quarantine & queue */
+  adminQuarantine() {
+    return request<{ items: QuarantineRow[] }>("/api/admin/quarantine");
+  },
+  adminDeleteQuarantine(ids: string[]) {
+    return request<{ ok: boolean }>("/api/admin/quarantine", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    });
+  },
+  adminMailQueue() {
+    return request<{ items: unknown[] }>("/api/admin/mailq");
+  },
+  /** Infra */
+  adminFwdHosts() {
+    return request<{ items: unknown[] }>("/api/admin/fwdhosts");
+  },
+  adminRelayHosts() {
+    return request<{ items: unknown[] }>("/api/admin/relayhosts");
+  },
+  adminTransports() {
+    return request<{ items: unknown[] }>("/api/admin/transports");
+  },
+  adminSyncJobs() {
+    return request<{ items: unknown[] }>("/api/admin/syncjobs");
+  },
+  adminResources() {
+    return request<{ items: unknown[] }>("/api/admin/resources");
+  },
+  adminFail2ban() {
+    return request<{ fail2ban: unknown }>("/api/admin/fail2ban");
+  },
+  adminLogs(type: string, count = 50) {
+    return request<{ logs: unknown }>(`/api/admin/logs/${type}?count=${count}`);
+  },
+  adminSolrStatus() {
+    return request<{ solr: unknown }>("/api/admin/status/solr");
+  },
+  /** Account extras */
+  timeLimitedAliases() {
+    return request<{ aliases: unknown[] }>("/api/account/time-limited-aliases");
+  },
+  createTimeLimitedAlias(data: Record<string, unknown>) {
+    return request<{ ok: boolean }>("/api/account/time-limited-aliases", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  updateSpamScore(spam_score: string) {
+    return request<{ ok: boolean }>("/api/account/spam-score", {
+      method: "PATCH",
+      body: JSON.stringify({ spam_score }),
+    });
+  },
+  updateUserAcl(attr: Record<string, unknown>) {
+    return request<{ ok: boolean }>("/api/account/user-acl", {
+      method: "PATCH",
+      body: JSON.stringify({ attr }),
+    });
+  },
+  /** CalDAV/CardDAV write */
+  createCalendarEvent(href: string, summary: string) {
+    return request<{ ok: boolean; id: string }>("/api/calendar/events", {
+      method: "POST",
+      body: JSON.stringify({ href, summary }),
+    });
+  },
+  deleteCalendarEvent(path: string) {
+    return request<{ ok: boolean }>("/api/calendar/events", {
+      method: "DELETE",
+      body: JSON.stringify({ path }),
+    });
+  },
+  createContact(href: string, fn: string, email?: string) {
+    return request<{ ok: boolean; id: string }>("/api/contacts", {
+      method: "POST",
+      body: JSON.stringify({ href, fn, email }),
+    });
+  },
+  deleteContact(path: string) {
+    return request<{ ok: boolean }>("/api/contacts", {
+      method: "DELETE",
+      body: JSON.stringify({ path }),
+    });
   },
 };

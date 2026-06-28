@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { config } from "./config.js";
 
 const davBase = () => `https://${config.mailcowHostname}/SOGo/dav`;
@@ -82,11 +83,18 @@ export async function fetchCalendarEvents(email: string, password: string, calen
 </C:calendar-query>`;
   const path = calendarHref.replace(/^https?:\/\/[^/]+/, "").replace("/SOGo/dav", "");
   const xml = await davRequest(email, password, path, "REPORT", report);
-  const events: { summary: string; raw: string }[] = [];
-  for (const block of xml.split("BEGIN:VEVENT")) {
-    if (!block.includes("END:VEVENT")) continue;
+  const events: { summary: string; raw: string; path?: string }[] = [];
+  for (const part of xml.split("<D:response>")) {
+    if (!part.includes("BEGIN:VEVENT")) continue;
+    const href = part.match(/<D:href>([^<]+)<\/D:href>/)?.[1];
+    const block = part.split("BEGIN:VEVENT")[1]?.split("END:VEVENT")[0];
+    if (!block) continue;
     const summary = block.match(/\nSUMMARY:([^\n]+)/)?.[1] ?? "(Sem título)";
-    events.push({ summary, raw: "BEGIN:VEVENT" + block.split("END:VEVENT")[0] + "END:VEVENT" });
+    events.push({
+      summary,
+      raw: "BEGIN:VEVENT" + block + "END:VEVENT",
+      path: href,
+    });
   }
   return events;
 }
@@ -98,12 +106,77 @@ export async function fetchContacts(email: string, password: string, bookHref: s
 </C:addressbook-query>`;
   const path = bookHref.replace(/^https?:\/\/[^/]+/, "").replace("/SOGo/dav", "");
   const xml = await davRequest(email, password, path, "REPORT", report);
-  const contacts: { fn: string; email?: string }[] = [];
-  for (const block of xml.split("BEGIN:VCARD")) {
-    if (!block.includes("END:VCARD")) continue;
+  const contacts: { fn: string; email?: string; path?: string }[] = [];
+  for (const part of xml.split("<D:response>")) {
+    if (!part.includes("BEGIN:VCARD")) continue;
+    const href = part.match(/<D:href>([^<]+)<\/D:href>/)?.[1];
+    const block = part.split("BEGIN:VCARD")[1]?.split("END:VCARD")[0];
+    if (!block) continue;
     const fn = block.match(/\nFN:([^\n]+)/)?.[1] ?? "Contacto";
     const emailMatch = block.match(/\nEMAIL[^:]*:([^\n]+)/)?.[1];
-    contacts.push({ fn, email: emailMatch });
+    contacts.push({ fn, email: emailMatch, path: href });
   }
   return contacts;
+}
+
+function davPath(href: string) {
+  return href.replace(/^https?:\/\/[^/]+/, "").replace("/SOGo/dav", "");
+}
+
+export async function createCalendarEvent(
+  email: string,
+  password: string,
+  calendarHref: string,
+  summary: string,
+) {
+  const uid = crypto.randomUUID();
+  const base = davPath(calendarHref).replace(/\/?$/, "/");
+  const now = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `SUMMARY:${summary}`,
+    `DTSTART:${now}`,
+    `DTEND:${now}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  await davRequest(email, password, `${base}${uid}.ics`, "PUT", ics, {
+    "Content-Type": "text/calendar; charset=utf-8",
+  });
+  return uid;
+}
+
+export async function deleteCalendarEvent(email: string, password: string, eventPath: string) {
+  await davRequest(email, password, davPath(eventPath), "DELETE", undefined, { Depth: "0" });
+}
+
+export async function createContact(
+  email: string,
+  password: string,
+  bookHref: string,
+  fn: string,
+  contactEmail?: string,
+) {
+  const uid = crypto.randomUUID();
+  const base = davPath(bookHref).replace(/\/?$/, "/");
+  const vcard = [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `FN:${fn}`,
+    contactEmail ? `EMAIL:${contactEmail}` : "",
+    "END:VCARD",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+  await davRequest(email, password, `${base}${uid}.vcf`, "PUT", vcard, {
+    "Content-Type": "text/vcard; charset=utf-8",
+  });
+  return uid;
+}
+
+export async function deleteContact(email: string, password: string, contactPath: string) {
+  await davRequest(email, password, davPath(contactPath), "DELETE", undefined, { Depth: "0" });
 }

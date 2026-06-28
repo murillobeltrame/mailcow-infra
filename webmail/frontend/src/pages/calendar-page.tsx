@@ -1,12 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
-import { CalendarDays } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { asArray } from "@/lib/utils";
 
 export function CalendarPage() {
+  const qc = useQueryClient();
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
+  const [newEvent, setNewEvent] = useState("");
 
   const calendarsQuery = useQuery({
     queryKey: ["calendar", "calendars"],
@@ -19,8 +25,27 @@ export function CalendarPage() {
     enabled: !!selectedHref,
   });
 
+  const createEvent = useMutation({
+    mutationFn: () => api.createCalendarEvent(selectedHref!, newEvent.trim()),
+    onSuccess: () => {
+      toast.success("Evento criado");
+      setNewEvent("");
+      qc.invalidateQueries({ queryKey: ["calendar", "events", selectedHref] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
+  const deleteEvent = useMutation({
+    mutationFn: (path: string) => api.deleteCalendarEvent(path),
+    onSuccess: () => {
+      toast.success("Evento removido");
+      qc.invalidateQueries({ queryKey: ["calendar", "events", selectedHref] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
+  });
+
   const calendars = asArray<{ href: string; name: string }>(calendarsQuery.data);
-  const events = asArray<{ summary: string }>(eventsQuery.data);
+  const events = asArray<{ summary: string; path?: string }>(eventsQuery.data);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -55,19 +80,56 @@ export function CalendarPage() {
           <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
             {!selectedHref ? (
               <p className="text-sm text-muted-foreground">Selecione um calendário</p>
-            ) : eventsQuery.isLoading ? (
-              <Skeleton className="h-48 w-full" />
             ) : (
-              <ul className="space-y-3">
-                {events.map((ev, i) => (
-                  <li key={i} className="rounded-xl border border-border/60 px-4 py-3">
-                    <p className="font-medium">{ev.summary || "(Sem título)"}</p>
-                  </li>
-                ))}
-                {events.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nenhum evento neste calendário</p>
+              <>
+                <div className="mb-6 flex flex-wrap items-end gap-3">
+                  <div className="min-w-[200px] flex-1 space-y-2">
+                    <Label htmlFor="event-title">Novo evento</Label>
+                    <Input
+                      id="event-title"
+                      placeholder="Reunião, compromisso…"
+                      value={newEvent}
+                      onChange={(e) => setNewEvent(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    className="rounded-xl"
+                    disabled={!newEvent.trim() || createEvent.isPending}
+                    onClick={() => createEvent.mutate()}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar
+                  </Button>
+                </div>
+                {eventsQuery.isLoading ? (
+                  <Skeleton className="h-48 w-full" />
+                ) : (
+                  <ul className="space-y-3">
+                    {events.map((ev, i) => (
+                      <li
+                        key={ev.path ?? i}
+                        className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3"
+                      >
+                        <p className="font-medium">{ev.summary || "(Sem título)"}</p>
+                        {ev.path && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg text-destructive"
+                            disabled={deleteEvent.isPending}
+                            onClick={() => deleteEvent.mutate(ev.path!)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                    {events.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Nenhum evento neste calendário</p>
+                    )}
+                  </ul>
                 )}
-              </ul>
+              </>
             )}
           </section>
         </div>
