@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
+  /* ── Angular Material theme (Nive) ── */
   angular.module("SOGo.Common").config(configure);
-
   configure.$inject = ["$mdThemingProvider"];
 
   function configure($mdThemingProvider) {
@@ -61,4 +61,106 @@
 
     $mdThemingProvider.generateThemesOnDemand(true);
   }
+
+  /* ── UI fixes (DOM) ── */
+  var DATE_SELECTORS = [
+    ".sg-date-group",
+    ".sg-date-today",
+    ".sg-day",
+    ".sg-month",
+    ".sg-year",
+    "p.sg-date-today",
+    ".sg-md-display-3.sg-date-today",
+  ];
+
+  function isPreferencesView() {
+    return /\/Preferences\//i.test(window.location.pathname);
+  }
+
+  function hideDateHeader() {
+    DATE_SELECTORS.forEach(function (sel) {
+      document.querySelectorAll(sel).forEach(function (el) {
+        el.style.setProperty("display", "none", "important");
+        el.style.setProperty("visibility", "hidden", "important");
+        el.style.setProperty("height", "0", "important");
+        el.style.setProperty("overflow", "hidden", "important");
+      });
+    });
+  }
+
+  function fixSidenavUserHeader() {
+    document.querySelectorAll("md-sidenav md-toolbar.md-tall").forEach(function (toolbar) {
+      toolbar.style.removeProperty("max-height");
+      toolbar.style.removeProperty("height");
+    });
+
+    document.querySelectorAll("md-sidenav .sg-md-title").forEach(function (title) {
+      title.style.setProperty("white-space", "normal", "important");
+      title.style.setProperty("overflow", "visible", "important");
+      title.style.setProperty("line-height", "1.35", "important");
+    });
+  }
+
+  function injectWebmailBanner() {
+    if (isPreferencesView()) return;
+    if (document.querySelector(".nive-webmail-banner")) return;
+
+    var path = window.location.pathname.toLowerCase();
+    if (path.indexOf("/mail/") === -1 && path.indexOf("/calendar/") === -1) return;
+
+    var content = document.querySelector("md-content");
+    if (!content) return;
+
+    var banner = document.createElement("div");
+    banner.className = "nive-webmail-banner";
+    banner.innerHTML =
+      '<span>Para ler e enviar e-mails, use o webmail moderno.</span>' +
+      '<a href="/mail/">Abrir webmail</a>';
+
+    content.insertBefore(banner, content.firstChild);
+  }
+
+  function redirectMailToolbar() {
+    document.querySelectorAll("md-toolbar md-icon").forEach(function (icon) {
+      if (icon.textContent.trim() !== "mail") return;
+      var btn = icon.closest(".md-button");
+      if (!btn || btn.dataset.niveMailRedirect) return;
+      btn.dataset.niveMailRedirect = "1";
+      btn.addEventListener(
+        "click",
+        function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.location.href = "/mail/";
+        },
+        true
+      );
+    });
+  }
+
+  function redirectSogoMailModule() {
+    var path = window.location.pathname;
+    var hash = window.location.hash || "";
+    if (/\/Mail(\/|$)/i.test(path) || /#!\/Mail/i.test(hash)) {
+      window.location.replace("/mail/");
+    }
+  }
+
+  function applyUiFixes() {
+    hideDateHeader();
+    fixSidenavUserHeader();
+    redirectSogoMailModule();
+    injectWebmailBanner();
+    redirectMailToolbar();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyUiFixes);
+  } else {
+    applyUiFixes();
+  }
+
+  new MutationObserver(function () {
+    applyUiFixes();
+  }).observe(document.documentElement, { childList: true, subtree: true });
 })();

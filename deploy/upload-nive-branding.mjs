@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv, connectSsh } from "./lib/env.mjs";
@@ -10,8 +10,10 @@ const env = loadEnv(envPath);
 const root = join(__dir, "..");
 const brandingDir = join(root, "branding");
 const scriptPath = join(__dir, "apply-nive-branding.sh");
+const ensureMountsPath = join(__dir, "ensure-sogo-theme-mounts.sh");
 const remoteDir = "/tmp/nive-branding";
 const remoteScript = "/tmp/apply-nive-branding.sh";
+const remoteEnsureMounts = "/tmp/ensure-sogo-theme-mounts.sh";
 
 function collectFiles(dir, base = dir) {
   const entries = readdirSync(dir).filter((f) => !f.startsWith("."));
@@ -102,10 +104,33 @@ try {
   }
 
   const script = readFileSync(scriptPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const patched = script.replace(
-    'BRANDING_DIR="${SCRIPT_DIR}/../branding"',
-    `BRANDING_DIR="${remoteDir}"`,
-  );
+
+  const ensureScript = readFileSync(ensureMountsPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  await writeFile(s, remoteEnsureMounts, ensureScript, 0o755);
+  console.log("uploaded ensure-sogo-theme-mounts.sh");
+
+  const repairPath = join(__dir, "repair-compose-override.sh");
+  const remoteRepair = "/tmp/repair-compose-override.sh";
+  if (existsSync(repairPath)) {
+    const repairScript = readFileSync(repairPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    await writeFile(s, remoteRepair, repairScript, 0o755);
+    console.log("uploaded repair-compose-override.sh");
+  }
+
+  const patched = script
+    .replace(
+      'BRANDING_DIR="${SCRIPT_DIR}/../branding"',
+      `BRANDING_DIR="${remoteDir}"`,
+    )
+    .replace(
+      'bash "${SCRIPT_DIR}/ensure-sogo-theme-mounts.sh"',
+      `bash "${remoteEnsureMounts}"`,
+    )
+    .replace(
+      'bash "${SCRIPT_DIR}/repair-compose-override.sh"',
+      `bash ${remoteRepair}`,
+    );
+
   await writeFile(s, remoteScript, patched, 0o755);
   console.log("uploaded apply-nive-branding.sh");
 

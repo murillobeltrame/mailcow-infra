@@ -18,6 +18,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
+ENV COOKIE_PATH=/mail/
 ENV IMAP_HOST=dovecot-mailcow
 ENV IMAP_PORT=993
 ENV SMTP_HOST=postfix-mailcow

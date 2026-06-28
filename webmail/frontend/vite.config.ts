@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8080";
 
 export default defineConfig({
+  base: "/mail/",
   plugins: [react()],
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

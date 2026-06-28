@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Reconstrói docker-compose.override.yml com um único bloco services (SOGo CSS + Dovecot SSO).
+# Reconstrói docker-compose.override.yml válido (SOGo theme + SSO + webmail).
 set -euo pipefail
 MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
-cd "${MAILCOW_DIR}"
 OVERRIDE="${MAILCOW_DIR}/docker-compose.override.yml"
 
 cat > "${OVERRIDE}" <<'EOF'
@@ -34,23 +33,14 @@ services:
       - traefik.enable=false
 EOF
 
-echo "Override reconstruído:"
-cat "${OVERRIDE}"
-
-echo "==> Validando YAML..."
+echo "Override reparado: ${OVERRIDE}"
+cd "${MAILCOW_DIR}"
 docker compose config >/dev/null
-echo "YAML OK"
+echo "YAML válido."
 
-echo "==> Recriando Dovecot..."
-docker compose up -d dovecot-mailcow
-sleep 8
+docker compose up -d nive-mail-web sogo-mailcow
+docker compose restart nginx-mailcow
 
-DOVECOT="$(docker ps --format '{{.Names}}' | grep -E 'dovecot-mailcow' | head -1)"
-docker exec "${DOVECOT}" test -f /etc/sogo-sso/sogo-sso.pass && echo "dovecot: /etc/sogo-sso/sogo-sso.pass OK" || { echo "FALHOU"; exit 1; }
-
-P="$(cat data/conf/phpfpm/sogo-sso/sogo-sso.pass)"
-echo "==> Teste doveadm auth (SSO master password):"
-docker exec "${DOVECOT}" doveadm auth test contato@storembimportados.com.br "$P" 2>&1 | tail -5
-
-docker compose restart sogo-mailcow memcached-mailcow php-fpm-mailcow
-echo "Concluído. Faça logout e login em https://mail.nivesistemas.com.br/"
+sleep 2
+curl -sk -o /dev/null -w "/mail/ -> HTTP %{http_code}\n" -H "Host: mail.nivesistemas.com.br" https://127.0.0.1/mail/
+docker ps --format '{{.Names}}: {{.Status}}' | grep -E 'nive-mail|nginx'

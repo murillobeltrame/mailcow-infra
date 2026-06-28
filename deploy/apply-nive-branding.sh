@@ -11,7 +11,7 @@ IMG="${WEB}/img"
 CSS="${WEB}/css/build/0081-custom-mailcow.css"
 SOGO_CONF_DIR="${MAILCOW_DIR}/data/conf/sogo"
 OVERRIDE_FILE="${MAILCOW_DIR}/docker-compose.override.yml"
-OVERRIDE_MARKER="# Nive Mail — SOGo custom theme CSS"
+OVERRIDE_MARKER="# Nive Mail — SOGo custom theme"
 
 if [[ ! -d "${MAILCOW_DIR}" ]]; then
   echo "Mailcow não encontrado em ${MAILCOW_DIR}" >&2
@@ -61,59 +61,10 @@ if [[ -d "${SOGO_BRANDING}" ]]; then
     cp "${BRANDING_DIR}/nive-icon.svg" "${SOGO_CONF_DIR}/custom-favicon.ico" 2>/dev/null || true
   fi
 
-  echo "==> Configurando docker-compose.override.yml (SOGo CSS)..."
-  SOGO_CSS_MOUNT="./data/conf/sogo/custom-theme.css:/usr/local/lib/GNUstep/SOGo/WebServerResources/css/theme-default.css:z"
-
-  if [[ -f "${OVERRIDE_FILE}" ]] && grep -qF "${OVERRIDE_MARKER}" "${OVERRIDE_FILE}"; then
-    echo "    Override Nive já presente — mantendo."
-  elif [[ -f "${OVERRIDE_FILE}" ]] && grep -q 'custom-theme.css' "${OVERRIDE_FILE}"; then
-    echo "    Override existente com custom-theme.css — não alterado."
-  elif [[ -f "${OVERRIDE_FILE}" ]] && grep -q 'sogo-mailcow:' "${OVERRIDE_FILE}"; then
-    python3 - "${OVERRIDE_FILE}" "${SOGO_CSS_MOUNT}" <<'PY' 2>/dev/null || true
-import sys
-path, mount = sys.argv[1], sys.argv[2]
-with open(path) as f:
-    content = f.read()
-if mount.split(":")[0] in content:
-    sys.exit(0)
-lines = content.splitlines()
-out, in_sogo, in_volumes, inserted = [], False, False, False
-for line in lines:
-    out.append(line)
-    if line.strip().startswith("sogo-mailcow:"):
-        in_sogo, in_volumes = True, False
-    elif in_sogo and line.strip().startswith("volumes:"):
-        in_volumes = True
-    elif in_sogo and in_volumes and not inserted and line.startswith("      - "):
-        out.append(f"      - {mount}")
-        inserted = True
-    elif in_sogo and in_volumes and line.strip() and not line.startswith(" ") and not line.startswith("-"):
-        in_sogo, in_volumes = False, False
-if not inserted:
-    out.extend(["", "# Nive Mail — SOGo custom theme CSS", "services:", "  sogo-mailcow:", "    volumes:", f"      - {mount}"])
-with open(path, "w") as f:
-    f.write("\n".join(out) + "\n")
-PY
-    echo "    Volume SOGo CSS adicionado ao override existente."
-  elif [[ -f "${OVERRIDE_FILE}" ]]; then
-    cat >> "${OVERRIDE_FILE}" <<EOF
-
-${OVERRIDE_MARKER}
-services:
-  sogo-mailcow:
-    volumes:
-      - ${SOGO_CSS_MOUNT}
-EOF
-    echo "    Bloco SOGo adicionado ao override existente."
-  else
-    cat > "${OVERRIDE_FILE}" <<EOF
-${OVERRIDE_MARKER}
-services:
-  sogo-mailcow:
-    volumes:
-      - ${SOGO_CSS_MOUNT}
-EOF
-    echo "    Override criado."
+  echo "==> Configurando docker-compose.override.yml..."
+  bash "${SCRIPT_DIR}/ensure-sogo-theme-mounts.sh"
+  if [[ -f "${SCRIPT_DIR}/repair-compose-override.sh" ]]; then
+    bash "${SCRIPT_DIR}/repair-compose-override.sh" 2>/dev/null || true
   fi
 fi
 
@@ -181,11 +132,9 @@ if [[ -n "${PHP_CONTAINER}" ]]; then
 fi
 
 if docker ps --format '{{.Names}}' | grep -qE 'sogo-mailcow'; then
-  echo "==> Aplicando override SOGo e reiniciando containers..."
+  echo "==> Reiniciando SOGo (CSS + JS)..."
   cd "${MAILCOW_DIR}"
-  if [[ -f "${OVERRIDE_FILE}" ]] && grep -qF "${OVERRIDE_MARKER}" "${OVERRIDE_FILE}"; then
-    docker compose up -d sogo-mailcow 2>/dev/null || docker-compose up -d sogo-mailcow 2>/dev/null || true
-  fi
+  docker compose up -d sogo-mailcow 2>/dev/null || docker-compose up -d sogo-mailcow 2>/dev/null || true
   docker compose restart sogo-mailcow memcached-mailcow 2>/dev/null || \
     docker-compose restart sogo-mailcow memcached-mailcow 2>/dev/null || true
 fi

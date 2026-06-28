@@ -1,260 +1,439 @@
-/* ═══════════════════════════════════════════════════════════
-   Nive Mail — SOGo webmail modernizado
-   Complementa custom-theme.js (Angular Material)
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   Nive Mail — SOGo UI (v5.12.x)
+   Substitui theme-default.css — calendário, contatos, preferências
+   Webmail de leitura: https://…/mail/ (React)
+   ═══════════════════════════════════════════════════════════════════ */
 
 :root {
   --nive-primary: #22578d;
   --nive-primary-hover: #1a4f7a;
-  --nive-primary-subtle: rgb(34 87 141 / 0.1);
-  --nive-sidebar: #1e293b;
-  --nive-bg: #f8fafc;
+  --nive-primary-soft: rgb(34 87 141 / 0.12);
+  --nive-toolbar: #1e293b;
+  --nive-bg: #f1f5f9;
   --nive-surface: #ffffff;
   --nive-border: #e2e8f0;
   --nive-text: #0f172a;
   --nive-muted: #64748b;
-  --nive-radius: 0.625rem;
+  --nive-radius: 10px;
 }
 
 /* ── Base ── */
+html,
 body,
-.md-default-theme,
-html {
+.md-default-theme {
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
   -webkit-font-smoothing: antialiased;
 }
 
-md-content.md-default-theme,
-md-content {
-  background-color: var(--nive-bg) !important;
+body {
+  background: var(--nive-bg) !important;
+  color: var(--nive-text) !important;
 }
 
-/* ── Esconde cabeçalho de data gigante (confuso) ── */
-#calendarHeader,
-.calendarHeader,
-.sogoDateHeader,
-md-toolbar .calendarDate,
-.toolbar-calendar-date,
-[class*="calendar-date"],
-md-toolbar h1.text-uppercase {
+md-content,
+md-content.md-default-theme {
+  background: var(--nive-bg) !important;
+  color: var(--nive-text) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TOP TOOLBAR — esconder data gigante (NÃO afetar md-tall do sidenav)
+   ══════════════════════════════════════════════════════════════════ */
+.sg-date-group,
+.sg-date-today,
+.sg-day,
+.sg-month,
+.sg-year,
+p.sg-date-today,
+.sg-md-display-3.sg-date-today,
+.sg-toolbar-group-1 .sg-date-group,
+.sg-toolbar-group-1 .sg-md-display-3,
+.sg-toolbar-group-1 p.sg-date-today {
   display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
 }
 
-/* Toolbar principal — compacta e limpa */
-md-toolbar.md-default-theme:not(.md-menu-toolbar),
-md-toolbar:not(.md-menu-toolbar) {
-  background: var(--nive-sidebar) !important;
+.sg-toolbar-group-1 {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.sg-toolbar-group-1::before {
+  content: "Nive Mail";
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Toolbar principal (topo) — exclui sidenav e toolbars secundárias */
+md-toolbar:not(.md-menu-toolbar):not(.md-tall) {
+  background: var(--nive-toolbar) !important;
   color: rgba(255, 255, 255, 0.95) !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12) !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15) !important;
 }
 
-md-toolbar md-toolbar-tools {
-  height: 56px !important;
-  max-height: 56px !important;
+md-toolbar:not(.md-menu-toolbar):not(.md-tall) md-toolbar-tools {
+  height: 52px !important;
+  max-height: 52px !important;
+  padding: 0 12px !important;
 }
 
+md-toolbar:not(.md-tall) md-icon,
+md-toolbar:not(.md-tall) .material-icons {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+md-toolbar:not(.md-tall) .md-button.md-icon-button {
+  margin: 0 2px !important;
+}
+
+/* Toolbar secundária (busca, filtros) */
+md-toolbar.md-menu-toolbar,
 md-toolbar.md-hue-2 {
-  background: var(--nive-primary) !important;
+  background: var(--nive-surface) !important;
+  color: var(--nive-text) !important;
+  min-height: 48px !important;
+  max-height: none !important;
+  border-bottom: 1px solid var(--nive-border) !important;
+  box-shadow: none !important;
 }
 
-/* ── Sidebar de pastas ── */
-#foldersList,
-.sogoSidebar,
-.left-pane,
-.mailbox-list {
+md-toolbar.md-menu-toolbar md-icon {
+  color: var(--nive-muted) !important;
+}
+
+/* FAB salvar — integrar ao header em vez de flutuar */
+md-fab-toolbar,
+md-fab-toolbar.md-right {
+  position: static !important;
+  align-self: center !important;
+  margin: 0 4px !important;
+}
+
+md-fab-toolbar .md-fab,
+md-fab-toolbar .md-button.md-fab {
+  transform: none !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  line-height: 40px !important;
+  box-shadow: none !important;
+  background: rgb(255 255 255 / 0.12) !important;
+}
+
+md-fab-toolbar .md-fab:hover,
+md-fab-toolbar .md-button.md-fab:hover {
+  background: rgb(255 255 255 / 0.2) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SIDENAV — cabeçalho do usuário (Preferências, etc.)
+   ══════════════════════════════════════════════════════════════════ */
+md-sidenav,
+md-sidenav.md-default-theme {
   background: var(--nive-surface) !important;
   border-right: 1px solid var(--nive-border) !important;
+  box-shadow: none !important;
+  width: 260px !important;
+  max-width: 260px !important;
 }
 
-md-list-item.md-default-theme,
-md-list-item {
+md-sidenav md-toolbar.md-tall {
+  background: var(--nive-primary) !important;
+  color: #fff !important;
+  min-height: 128px !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+md-sidenav md-toolbar.md-tall .md-toolbar-tools {
+  height: auto !important;
+  min-height: 48px !important;
+  max-height: none !important;
+  padding: 12px 16px !important;
+}
+
+md-sidenav md-toolbar.md-tall .md-toolbar-tools:first-child {
+  min-height: 56px !important;
+  padding-bottom: 0 !important;
+}
+
+md-sidenav .sg-md-title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  color: #fff !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+}
+
+md-sidenav .sg-logo,
+md-sidenav .sg-logo svg {
+  max-height: 28px !important;
+  width: auto !important;
+}
+
+md-sidenav md-list-item,
+md-sidenav md-list-item .md-list-item-inner {
+  color: var(--nive-text) !important;
   border-radius: var(--nive-radius) !important;
   margin: 2px 8px !important;
-  transition: background 0.15s ease !important;
 }
 
-md-list-item.md-default-theme .md-list-item-inner,
-md-list-item .md-list-item-inner {
-  color: var(--nive-text) !important;
-  min-height: 40px !important;
-  padding: 0 12px !important;
-  border-radius: var(--nive-radius) !important;
-}
-
-md-list-item.md-default-theme.selected .md-list-item-inner,
-md-list-item.selected .md-list-item-inner,
-md-list-item.md-default-theme.md-clickable:hover .md-list-item-inner,
-md-list-item.md-clickable:hover .md-list-item-inner {
-  background-color: var(--nive-primary-subtle) !important;
+md-sidenav md-list-item.selected .md-list-item-inner,
+md-sidenav md-list-item.md-clickable:hover .md-list-item-inner {
+  background: var(--nive-primary-soft) !important;
   color: var(--nive-primary) !important;
 }
 
-md-list-item.selected {
+md-sidenav md-list-item.selected {
   border-left: 3px solid var(--nive-primary) !important;
 }
 
-/* ── Lista de mensagens ── */
-.message-list,
-#messagesTable,
-.mail-list {
-  background: var(--nive-surface) !important;
+/* ══════════════════════════════════════════════════════════════════
+   PREFERÊNCIAS — área de conteúdo
+   ══════════════════════════════════════════════════════════════════ */
+md-content[ui-view],
+md-content .md-padding,
+.preferences-content,
+form[name="preferencesForm"] {
+  padding: 20px 28px 32px !important;
 }
 
-.message-list md-list-item,
-.mail-list-item,
-[ng-repeat*="message"] md-list-item {
-  border-bottom: 1px solid var(--nive-border) !important;
+md-content[ui-view] > div,
+md-content .md-padding > div {
+  max-width: 720px;
 }
 
-.message-list md-list-item.unread .md-list-item-inner,
-.mail-list-item.unread {
-  font-weight: 600 !important;
-  background: var(--nive-primary-subtle) !important;
-}
-
-/* ── Painel de leitura ── */
-.message-view,
-#messageContent,
-.reading-pane {
-  background: var(--nive-surface) !important;
-  padding: 1.5rem !important;
-}
-
-.message-view .subject,
-.message-subject {
-  font-size: 1.25rem !important;
-  font-weight: 600 !important;
+md-content h2,
+md-content .sg-md-headline,
+.preferences-content h2 {
+  font-size: 1.375rem !important;
+  font-weight: 700 !important;
   color: var(--nive-text) !important;
-  line-height: 1.4 !important;
+  margin: 0 0 20px !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Versão SOGo — linha discreta */
+md-content p.sg-md-caption,
+md-content .sg-version {
+  color: var(--nive-muted) !important;
+  font-size: 0.8125rem !important;
+  margin-bottom: 24px !important;
+}
+
+/* ── Formulários ── */
+md-input-container {
+  margin: 8px 0 20px !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 480px !important;
+}
+
+md-input-container .md-input,
+md-input-container .md-select-value {
+  border: 1px solid var(--nive-border) !important;
+  border-radius: var(--nive-radius) !important;
+  background: var(--nive-surface) !important;
+  color: var(--nive-text) !important;
+  padding: 10px 12px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
+  border-bottom-width: 1px !important;
+}
+
+md-input-container:not(.md-input-invalid).md-input-focused .md-input,
+md-input-container:not(.md-input-invalid).md-input-focused .md-select-value {
+  border-color: var(--nive-primary) !important;
+  box-shadow: 0 0 0 3px rgb(34 87 141 / 0.15) !important;
+  padding-bottom: 10px !important;
+}
+
+md-input-container label,
+md-input-container .md-placeholder {
+  color: var(--nive-muted) !important;
+  font-weight: 500 !important;
+  font-size: 0.8125rem !important;
+}
+
+md-input-container.md-input-focused label {
+  color: var(--nive-primary) !important;
+}
+
+md-input-container .md-errors-spacer {
+  min-height: 0 !important;
+}
+
+md-select-menu md-content {
+  background: var(--nive-surface) !important;
+}
+
+md-option {
+  color: var(--nive-text) !important;
+}
+
+md-option[selected] {
+  color: var(--nive-primary) !important;
+}
+
+md-checkbox,
+md-radio-group {
+  margin: 12px 0 !important;
+}
+
+md-checkbox .md-label,
+md-radio-button .md-label {
+  color: var(--nive-text) !important;
+}
+
+md-radio-group.layout-row md-radio-button {
+  margin-right: 20px !important;
+}
+
+/* ── Pastas / listas ── */
+#foldersList,
+.sogoSidebar,
+.left-pane,
+.mailbox-list,
+[id="messagesList"] {
+  background: var(--nive-surface) !important;
+}
+
+md-list-item .md-list-item-inner {
+  color: var(--nive-text) !important;
+  border-radius: var(--nive-radius) !important;
+  min-height: 40px !important;
+}
+
+md-list-item.selected .md-list-item-inner {
+  background: var(--nive-primary-soft) !important;
+  color: var(--nive-primary) !important;
 }
 
 /* ── Botões ── */
-.md-button.md-primary,
-.md-button.md-default-theme.md-primary {
-  background-color: var(--nive-primary) !important;
-  color: #fff !important;
+.md-button {
   border-radius: var(--nive-radius) !important;
   text-transform: none !important;
   font-weight: 600 !important;
   letter-spacing: 0 !important;
 }
 
+.md-button.md-primary {
+  background: var(--nive-primary) !important;
+  color: #fff !important;
+}
+
 .md-button.md-primary:not([disabled]):hover {
-  background-color: var(--nive-primary-hover) !important;
+  background: var(--nive-primary-hover) !important;
 }
 
 .md-button.md-fab,
 .md-button.md-fab.md-primary {
-  background-color: var(--nive-primary) !important;
+  background: var(--nive-primary) !important;
   box-shadow: 0 4px 14px rgb(34 87 141 / 0.35) !important;
 }
 
-.md-button {
-  border-radius: var(--nive-radius) !important;
-  text-transform: none !important;
+/* ── Cards / painéis ── */
+md-card,
+md-card md-card-content {
+  background: var(--nive-surface) !important;
+  color: var(--nive-text) !important;
+  border-radius: calc(var(--nive-radius) + 2px) !important;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06) !important;
 }
 
-/* ── Inputs ── */
-md-input-container .md-input,
-input,
-textarea,
-select {
-  border-radius: calc(var(--nive-radius) - 2px) !important;
-}
-
-md-input-container.md-default-theme .md-input:focus,
-md-input-container .md-input:focus {
-  border-color: var(--nive-primary) !important;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid var(--nive-primary) !important;
-  outline-offset: 1px;
+/* ── Leitura de mensagem ── */
+.message-view,
+#messageContent,
+.reading-pane,
+.msg-header-content {
+  background: var(--nive-surface) !important;
+  color: var(--nive-text) !important;
 }
 
 /* ── Links ── */
-a,
-.md-default-theme a {
+a:not(.md-button) {
   color: var(--nive-primary) !important;
 }
 
-a:hover {
-  color: var(--nive-primary-hover) !important;
-}
-
-/* ── Progress ── */
-md-progress-linear .md-bar {
-  background-color: var(--nive-primary) !important;
-}
-
-md-progress-circular .md-inner .md-left .md-half-circle,
-md-progress-circular .md-inner .md-right .md-half-circle {
-  border-color: var(--nive-primary) !important;
-}
-
-/* ── Login SOGo ── */
+/* ── Login ── */
 .sogo-login-box,
 #loginScreen {
-  background: linear-gradient(135deg, var(--nive-bg) 0%, #e8eef5 100%) !important;
+  background: var(--nive-bg) !important;
 }
 
 .sogo-login-box md-toolbar,
 #loginScreen md-toolbar {
   background: var(--nive-primary) !important;
-  border-radius: var(--nive-radius) var(--nive-radius) 0 0 !important;
-}
-
-.sogo-login-box md-card,
-#loginScreen md-card {
-  border-radius: var(--nive-radius) !important;
-  box-shadow: 0 8px 30px rgb(15 23 42 / 0.1) !important;
-  overflow: hidden !important;
 }
 
 /* ── Dialogs ── */
-md-dialog {
-  border-radius: calc(var(--nive-radius) + 4px) !important;
-  box-shadow: 0 20px 50px rgb(15 23 42 / 0.15) !important;
-}
-
 md-dialog md-toolbar {
   background: var(--nive-surface) !important;
   color: var(--nive-text) !important;
   border-bottom: 1px solid var(--nive-border) !important;
 }
 
-/* ── Toolbar secundária (busca/filtros) ── */
-md-toolbar.md-menu-toolbar,
-.sub-toolbar {
+md-dialog md-dialog-content {
   background: var(--nive-surface) !important;
   color: var(--nive-text) !important;
-  border-bottom: 1px solid var(--nive-border) !important;
-  min-height: 48px !important;
 }
 
-/* ── Ícones utilitários (topo) ── */
-.top-toolbar md-icon,
-md-toolbar md-icon {
-  color: rgba(255, 255, 255, 0.9) !important;
+/* ── Banner webmail (só módulos mail/calendar — injetado via JS) ── */
+.nive-webmail-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 16px 0;
+  padding: 12px 16px;
+  border-radius: var(--nive-radius);
+  background: linear-gradient(135deg, rgb(34 87 141 / 0.12), rgb(34 87 141 / 0.04));
+  border: 1px solid rgb(34 87 141 / 0.2);
+  color: var(--nive-text);
+  font-size: 0.875rem;
 }
 
-/* ── Storage bar ── */
-.quota-bar,
-.storage-info {
-  font-size: 0.75rem !important;
-  color: var(--nive-muted) !important;
-  padding: 8px 12px !important;
+.nive-webmail-banner a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--nive-primary) !important;
+  color: #fff !important;
+  font-weight: 600;
+  text-decoration: none !important;
+  white-space: nowrap;
 }
 
-/* ── Empty state ── */
+.nive-webmail-banner a:hover {
+  background: var(--nive-primary-hover) !important;
+}
+
+/* ── Empty states ── */
 .no-message,
 .empty-state {
   color: var(--nive-muted) !important;
-  font-size: 0.875rem !important;
   padding: 3rem 1rem !important;
   text-align: center !important;
 }
@@ -270,14 +449,19 @@ md-toolbar md-icon {
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
 /* ── Responsivo ── */
 @media (max-width: 960px) {
-  md-toolbar.md-default-theme:not(.md-menu-toolbar),
-  md-toolbar:not(.md-menu-toolbar) {
+  .sg-toolbar-group-1::before {
+    font-size: 0.9375rem;
+  }
+
+  md-toolbar:not(.md-menu-toolbar):not(.md-tall) {
     min-height: 48px !important;
+    max-height: 48px !important;
+  }
+
+  md-sidenav {
+    width: 240px !important;
+    max-width: 240px !important;
   }
 }

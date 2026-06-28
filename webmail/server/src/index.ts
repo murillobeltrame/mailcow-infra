@@ -18,6 +18,7 @@ import { createSession, destroySession, getSession, touchSession } from "./sessi
 
 const app = Fastify({ logger: true });
 const SESSION_COOKIE = "nive_mail_session";
+const COOKIE_PATH = process.env.COOKIE_PATH ?? "/mail/";
 
 await app.register(cors, {
   origin: true,
@@ -55,7 +56,7 @@ app.post("/api/auth/login", async (request, reply) => {
   }
   const session = createSession(email, password, email.split("@")[0], config.sessionTtlMs);
   reply.setCookie(SESSION_COOKIE, session.id, {
-    path: "/",
+    path: COOKIE_PATH,
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -66,7 +67,7 @@ app.post("/api/auth/login", async (request, reply) => {
 
 app.post("/api/auth/logout", async (request, reply) => {
   destroySession(request.cookies[SESSION_COOKIE]);
-  reply.clearCookie(SESSION_COOKIE, { path: "/" });
+  reply.clearCookie(SESSION_COOKIE, { path: COOKIE_PATH });
   return { ok: true };
 });
 

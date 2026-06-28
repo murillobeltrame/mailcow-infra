@@ -7,8 +7,14 @@ export class ApiError extends Error {
   }
 }
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+
+function apiUrl(path: string): string {
+  return `${API_BASE}${path.replace(/^\//, "")}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     ...init,
     credentials: "include",
     headers: {

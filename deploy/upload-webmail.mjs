@@ -99,12 +99,18 @@ try {
   for (const [local, name] of [
     [scriptPath, "setup-webmail.sh"],
     [redirectScript, "redirect-webmail.sh"],
+    [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh"],
   ]) {
     const script = readFileSync(local, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    const patched = script.replace(
-      'WEBMAIL_DIR="${SCRIPT_DIR}/../webmail"',
-      `WEBMAIL_DIR="${remoteDir}"`,
-    );
+    const patched = script
+      .replace(
+        'WEBMAIL_DIR="${SCRIPT_DIR}/../webmail"',
+        `WEBMAIL_DIR="${remoteDir}"`,
+      )
+      .replace(
+        'bash "${SCRIPT_DIR}/repair-compose-override.sh"',
+        `bash /tmp/repair-compose-override.sh`,
+      );
     await writeFile(s, `/tmp/${name}`, patched, 0o755);
   }
 
