@@ -44,6 +44,18 @@ PROVISIONING_SECRET="${PROVISIONING_SECRET:-}"
 if [[ -z "${PROVISIONING_SECRET}" ]]; then
   echo "AVISO: PROVISIONING_SECRET ausente — reporte de falhas de login ao CMS Nive desativado."
   echo "       Rode: bash /var/www/stepgosistemassite/deploy/sync-security-env.sh"
+else
+  persist_conf_var() {
+    local key="$1" val="$2"
+    if grep -q "^${key}=" "${MAILCOW_DIR}/mailcow.conf" 2>/dev/null; then
+      sed -i "s|^${key}=.*|${key}=${val}|" "${MAILCOW_DIR}/mailcow.conf"
+    else
+      echo "${key}=${val}" >> "${MAILCOW_DIR}/mailcow.conf"
+    fi
+  }
+  persist_conf_var PROVISIONING_SECRET "${PROVISIONING_SECRET}"
+  persist_conf_var STEPGO_SITE_API_URL "${STEPGO_SITE_API_URL}"
+  echo "  credenciais CMS gravadas em mailcow.conf"
 fi
 
 if [[ -z "${MAILCOW_API_KEY}" ]]; then
@@ -75,6 +87,8 @@ services:
       - COOKIE_PATH=/mail/
       - PROVISIONING_SECRET=${PROVISIONING_SECRET}
       - STEPGO_SITE_API_URL=${STEPGO_SITE_API_URL}
+      - RATE_LIMIT_LOGIN_MAX=${RATE_LIMIT_LOGIN_MAX:-30}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
       - CLIENT_MAIL_HOST=${CLIENT_MAIL_HOST}
       - IMAP_TLS_SERVERNAME=${MAILCOW_HOSTNAME}
       - IMAP_TLS_REJECT_UNAUTHORIZED=false

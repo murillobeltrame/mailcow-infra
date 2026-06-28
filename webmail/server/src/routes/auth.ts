@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { authenticateLogin } from "../auth-service.js";
 import { reportLoginFailureToNive } from "../nive-security-report.js";
+import { checkLoginRateLimit } from "../login-rate-limit.js";
 import { config } from "../config.js";
 import {
   getRequestSession,
@@ -24,6 +25,10 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const login = (body.login ?? body.email)?.trim();
     const password = body.password;
     const loginAs = body.loginAs ?? body.role ?? "user";
+    const limited = checkLoginRateLimit(request, loginAs);
+    if (!limited.ok) {
+      return reply.status(429).send({ error: limited.message });
+    }
     try {
       if (!password) {
         return reply.status(400).send({ error: "Senha é obrigatória" });

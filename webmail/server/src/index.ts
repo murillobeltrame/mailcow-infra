@@ -13,7 +13,13 @@ import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerMailRoutes } from "./routes/mail.js";
 import { registerServiceRoutes } from "./routes/services.js";
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: true, trustProxy: true });
+
+app.addHook("onRequest", async (_request, reply) => {
+  reply.header("X-Content-Type-Options", "nosniff");
+  reply.header("X-Frame-Options", "DENY");
+  reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
+});
 
 await app.register(cors, { origin: true, credentials: true });
 await app.register(cookie, { secret: config.cookieSecret, hook: "onRequest" });
