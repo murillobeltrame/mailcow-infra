@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv, connectSsh } from "./lib/env.mjs";
+import { isLocalVpsDeploy, runBash, stageDirectory, writeExecutable } from "./lib/local-deploy.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const envPath = join(__dir, ".env.deploy");
@@ -29,6 +30,44 @@ function collectFiles(dir, base = dir) {
     }
   }
   return files;
+}
+
+function patchSetupScript(script) {
+  return script
+    .replace('WEBMAIL_DIR="${SCRIPT_DIR}/../webmail"', `WEBMAIL_DIR="${remoteDir}"`)
+    .replace('bash "${SCRIPT_DIR}/repair-compose-override.sh"', "bash /tmp/repair-compose-override.sh");
+}
+
+function writeDeployScripts() {
+  const scripts = [
+    [scriptPath, "setup-webmail.sh", patchSetupScript],
+    [redirectScript, "redirect-webmail.sh", (s) => s],
+    [join(__dir, "configure-mailcow-routes.sh"), "configure-mailcow-routes.sh", (s) => s],
+    [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh", (s) => s],
+  ];
+
+  for (const [local, name, patch] of scripts) {
+    if (!existsSync(local)) continue;
+    const content = patch(readFileSync(local, "utf8"));
+    writeExecutable(`/tmp/${name}`, content);
+    console.log(`prepared /tmp/${name}`);
+  }
+}
+
+async function runDeployScripts() {
+  const mailcowDir = env.MAILCOW_DIR || "/opt/mailcow-dockerized";
+  runBash("/tmp/setup-webmail.sh", { MAILCOW_DIR: mailcowDir });
+  if (existsSync("/tmp/configure-mailcow-routes.sh")) {
+    runBash("/tmp/configure-mailcow-routes.sh", { MAILCOW_DIR: mailcowDir });
+  }
+}
+
+async function deployLocal() {
+  console.log("==> Deploy local no VPS (sem SSH)");
+  stageDirectory(webmailDir, remoteDir);
+  console.log(`staged webmail → ${remoteDir}`);
+  writeDeployScripts();
+  await runDeployScripts();
 }
 
 function connect() {
@@ -84,47 +123,42 @@ function writeFile(sftpClient, remote, content, mode = 0o644) {
   });
 }
 
-const conn = await connect();
-try {
-  const s = await sftp(conn);
-  await exec(conn, `rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
-  const files = collectFiles(webmailDir);
+async function deploySsh() {
+  console.log("==> Deploy via SSH");
+  const conn = await connect();
+  try {
+    const s = await sftp(conn);
+    await exec(conn, `rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
+    const files = collectFiles(webmailDir);
 
-  for (const { local, remote } of files) {
-    await mkdirp(s, posix.dirname(remote));
-    await writeFile(s, remote, readFileSync(local));
-    console.log(`uploaded ${remote.slice(remoteDir.length + 1)}`);
+    for (const { local, remote } of files) {
+      await mkdirp(s, posix.dirname(remote));
+      await writeFile(s, remote, readFileSync(local));
+      console.log(`uploaded ${remote.slice(remoteDir.length + 1)}`);
+    }
+
+    for (const [local, name] of [
+      [scriptPath, "setup-webmail.sh"],
+      [redirectScript, "redirect-webmail.sh"],
+      [join(__dir, "configure-mailcow-routes.sh"), "configure-mailcow-routes.sh"],
+      [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh"],
+    ]) {
+      if (!existsSync(local)) continue;
+      const script = readFileSync(local, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      const patched = patchSetupScript(script);
+      await writeFile(s, `/tmp/${name}`, patched, 0o755);
+    }
+
+    const mailcowDir = env.MAILCOW_DIR || "/opt/mailcow-dockerized";
+    await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/setup-webmail.sh`);
+    await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/configure-mailcow-routes.sh`);
+  } finally {
+    conn.end();
   }
+}
 
-  for (const [local, name] of [
-    [scriptPath, "setup-webmail.sh"],
-    [redirectScript, "redirect-webmail.sh"],
-    [join(__dir, "configure-mailcow-routes.sh"), "configure-mailcow-routes.sh"],
-    [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh"],
-  ]) {
-    const script = readFileSync(local, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    const patched = script
-      .replace(
-        'WEBMAIL_DIR="${SCRIPT_DIR}/../webmail"',
-        `WEBMAIL_DIR="${remoteDir}"`,
-      )
-      .replace(
-        'bash "${SCRIPT_DIR}/repair-compose-override.sh"',
-        `bash /tmp/repair-compose-override.sh`,
-      );
-    await writeFile(s, `/tmp/${name}`, patched, 0o755);
-  }
-
-  const routesPath = join(__dir, "configure-mailcow-routes.sh");
-  if (existsSync(routesPath)) {
-    const routesScript = readFileSync(routesPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    await writeFile(s, "/tmp/configure-mailcow-routes.sh", routesScript, 0o755);
-    console.log("uploaded configure-mailcow-routes.sh");
-  }
-
-  const mailcowDir = env.MAILCOW_DIR || "/opt/mailcow-dockerized";
-  await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/setup-webmail.sh`);
-  await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/configure-mailcow-routes.sh`);
-} finally {
-  conn.end();
+if (isLocalVpsDeploy()) {
+  await deployLocal();
+} else {
+  await deploySsh();
 }

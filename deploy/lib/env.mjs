@@ -73,10 +73,16 @@ export function writeEnvFile(envPath, env) {
 }
 
 export function requireSshAuth(env) {
+  if (isLocalVpsDeploy()) return;
   if (process.env.VPS_SSH_KEY) return;
   if (!env.VPS_SSH_PASS) {
     throw new Error("VPS_SSH_PASS ou VPS_SSH_KEY é obrigatório");
   }
+}
+
+/** Deploy executado no próprio VPS (GitHub Actions self-hosted). */
+export function isLocalVpsDeploy() {
+  return process.env.DEPLOY_MODE === "local_vps";
 }
 
 export function isCiEnvironment() {
@@ -145,8 +151,8 @@ export function connectSsh(env, handlers, { attempts = 3, delayMs = 15000 } = {}
         setTimeout(tryConnect, delayMs);
       } else {
         console.error(`SSH falhou após ${attempts} tentativas: ${err.message}`);
-        console.error("Rode no VPS: bash fix-ssh-github-actions-vps.sh");
-        console.error("hPanel Hostinger: libere TCP 22 para 0.0.0.0/0");
+        console.error("Use runner self-hosted (DEPLOY_MODE=local_vps) como no sistemaloja.");
+        console.error("Ou rode no VPS: bash deploy/deploy-on-vps.sh");
         handlers.onError?.(err);
         process.exit(1);
       }

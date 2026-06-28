@@ -26,13 +26,13 @@ Repositório de deploy e operação do **Nive Mail** (Mailcow self-hosted) no VP
 
 ## Dois fluxos de deploy
 
-| | SSH local | GitHub Actions |
-|---|-----------|----------------|
-| **Para quê** | Configuração, DNS, caixas, validação, fixes | Código versionado (branding, scripts) |
-| **Velocidade** | Imediato | Após commit + push |
-| **Exemplo** | `node deploy.mjs validate` | `git push origin master` |
+| | SSH local (PC) | GitHub Actions |
+|---|----------------|----------------|
+| **Para quê** | Diagnóstico, DNS, validação | Código versionado (webmail, branding) |
+| **Como** | `node deploy.mjs ssh …` | `git push` → **runner no VPS** (igual sistemaloja) |
+| **Porta 22** | Do seu PC | Não precisa abrir para nuvem GitHub |
 
-O pipeline de Actions fica **sempre preparado** — mudanças em `branding/` ou `deploy/` disparam deploy automaticamente. Para operação e desenvolvimento, prefira SSH local.
+O deploy automático usa **self-hosted runner** (`vps-hostinger`) no mesmo VPS do Sistema Loja — não SSH da nuvem GitHub.
 
 Documentação completa: **[deploy/README.md](deploy/README.md)**
 

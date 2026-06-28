@@ -99,7 +99,40 @@ Opcionais com padrão: `VPS_IP`, `MAILCOW_HOSTNAME`, `MAIL_DOMAIN`, etc. — vej
 
 ---
 
-## Cenários
+## Dois fluxos de deploy
+
+| | SSH local (PC) | GitHub Actions (self-hosted) |
+|---|----------------|------------------------------|
+| **Como** | `node deploy.mjs ssh …` / diagnóstico | `git push` → runner **no VPS** executa deploy |
+| **Modelo** | Igual operação manual | **Igual sistemaloja** (`runs-on: vps-hostinger`) |
+| **Porta 22** | Só do seu PC | **Não precisa** abrir para nuvem GitHub |
+
+O deploy de código (`webmail`, `branding`) usa **runner self-hosted** no VPS Hostinger — label `vps-hostinger` (mesmo servidor do Sistema Loja). Não depende de SSH da nuvem GitHub para a porta 22.
+
+### Configurar runner (uma vez)
+
+Se o workflow ficar em fila (*Waiting for a runner*):
+
+1. GitHub → repositório **mailcow-infra** → **Settings → Actions → Runners**
+2. Se já existir runner `vps-hostinger` (org compartilhada), nada a fazer
+3. Senão: **New self-hosted runner** → Linux → siga os comandos **no VPS** (pode coexistir com o runner do sistemaloja)
+
+No VPS, clone o repo (opcional, para deploy manual):
+
+```bash
+bash deploy/link-vps-to-github.sh   # em /var/www/mailcow-infra
+cp deploy/.env.deploy.example deploy/.env.deploy   # preencher secrets
+```
+
+Deploy manual no VPS (sem Actions): `bash deploy/deploy-on-vps.sh`
+
+### Secrets GitHub
+
+Com runner self-hosted, `VPS_SSH_PASS` **não é obrigatório** (deploy roda localmente). Mantenha `MAILCOW_*`, `CLOUDFLARE_*`, etc.
+
+---
+
+## Cenários (legado SSH nuvem removido)
 
 | Objetivo | Ação recomendada |
 |----------|------------------|
@@ -113,7 +146,11 @@ Opcionais com padrão: `VPS_IP`, `MAILCOW_HOSTNAME`, `MAIL_DOMAIN`, etc. — vej
 
 ## Solução de problemas
 
-**SSH local OK, Actions timeout na porta 22:** libere TCP 22 no hPanel Hostinger para runners GitHub; rode `fix-ssh-github-actions-vps.sh` no VPS.
+**Workflow em fila / runner offline:** Settings → Actions → Runners → confirme `vps-hostinger` online (mesmo setup do [sistemaloja](https://github.com/murillobeltrame/sistemaloja)).
+
+**Deploy manual no VPS:** `bash /var/www/mailcow-infra/deploy/deploy-on-vps.sh`
+
+**SSH local (diagnóstico):** `node deploy.mjs ssh <script.sh>` — só do seu PC, não usa Actions.
 
 **Workflow falhou nos secrets:** rode `node sync-github-secrets.mjs` e tente de novo.
 

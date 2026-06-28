@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv, connectSsh } from "./lib/env.mjs";
+import { isLocalVpsDeploy, runBash, stageDirectory, writeExecutable, normalizeScript } from "./lib/local-deploy.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const envPath = join(__dir, ".env.deploy");
@@ -14,6 +15,7 @@ const ensureMountsPath = join(__dir, "ensure-sogo-theme-mounts.sh");
 const remoteDir = "/tmp/nive-branding";
 const remoteScript = "/tmp/apply-nive-branding.sh";
 const remoteEnsureMounts = "/tmp/ensure-sogo-theme-mounts.sh";
+const remoteRepair = "/tmp/repair-compose-override.sh";
 
 function collectFiles(dir, base = dir) {
   const entries = readdirSync(dir).filter((f) => !f.startsWith("."));
@@ -32,7 +34,46 @@ function collectFiles(dir, base = dir) {
   return files;
 }
 
-const files = collectFiles(brandingDir);
+function patchBrandingScript(script) {
+  return script
+    .replace('BRANDING_DIR="${SCRIPT_DIR}/../branding"', `BRANDING_DIR="${remoteDir}"`)
+    .replace('bash "${SCRIPT_DIR}/ensure-sogo-theme-mounts.sh"', `bash "${remoteEnsureMounts}"`)
+    .replace('bash "${SCRIPT_DIR}/repair-compose-override.sh"', `bash ${remoteRepair}`)
+    .replace('bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"', "bash /tmp/configure-mailcow-routes.sh");
+}
+
+function writeBrandingScripts() {
+  writeExecutable(remoteEnsureMounts, readFileSync(ensureMountsPath, "utf8"));
+  console.log(`prepared ${remoteEnsureMounts}`);
+
+  const repairPath = join(__dir, "repair-compose-override.sh");
+  if (existsSync(repairPath)) {
+    writeExecutable(remoteRepair, readFileSync(repairPath, "utf8"));
+    console.log(`prepared ${remoteRepair}`);
+  }
+
+  const configureRoutes = join(__dir, "configure-mailcow-routes.sh");
+  if (existsSync(configureRoutes)) {
+    writeExecutable("/tmp/configure-mailcow-routes.sh", readFileSync(configureRoutes, "utf8"));
+    console.log("prepared /tmp/configure-mailcow-routes.sh");
+  }
+
+  writeExecutable(remoteScript, patchBrandingScript(readFileSync(scriptPath, "utf8")));
+  console.log(`prepared ${remoteScript}`);
+}
+
+async function runBrandingScript() {
+  const mailcowDir = env.MAILCOW_DIR || "/opt/mailcow-dockerized";
+  runBash(remoteScript, { MAILCOW_DIR: mailcowDir });
+}
+
+async function deployLocal() {
+  console.log("==> Deploy local no VPS (sem SSH)");
+  stageDirectory(brandingDir, remoteDir);
+  console.log(`staged branding → ${remoteDir}`);
+  writeBrandingScripts();
+  await runBrandingScript();
+}
 
 function connect() {
   return new Promise((resolve, reject) => {
@@ -47,15 +88,11 @@ function exec(conn, cmd) {
   return new Promise((resolve, reject) => {
     conn.exec(cmd, (err, stream) => {
       if (err) return reject(err);
-      let out = "";
-      stream.on("data", (d) => {
-        out += d.toString();
-        process.stdout.write(d);
-      });
+      stream.on("data", (d) => process.stdout.write(d));
       stream.stderr.on("data", (d) => process.stderr.write(d));
       stream.on("close", (code) => {
         if (code) reject(new Error(`exit ${code}`));
-        else resolve(out);
+        else resolve();
       });
     });
   });
@@ -91,64 +128,51 @@ function writeFile(sftpClient, remote, content, mode = 0o644) {
   });
 }
 
-const conn = await connect();
-try {
-  const s = await sftp(conn);
-  await exec(conn, `rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
-  await mkdir(s, remoteDir);
+async function deploySsh() {
+  console.log("==> Deploy via SSH");
+  const files = collectFiles(brandingDir);
+  const conn = await connect();
+  try {
+    const s = await sftp(conn);
+    await exec(conn, `rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
 
-  for (const { local, remote } of files) {
-    await mkdirp(s, posix.dirname(remote));
-    await writeFile(s, remote, readFileSync(local));
-    console.log(`uploaded ${remote.slice(remoteDir.length + 1)}`);
+    for (const { local, remote } of files) {
+      await mkdirp(s, posix.dirname(remote));
+      await writeFile(s, remote, readFileSync(local));
+      console.log(`uploaded ${remote.slice(remoteDir.length + 1)}`);
+    }
+
+    await writeFile(s, remoteEnsureMounts, normalizeScript(readFileSync(ensureMountsPath, "utf8")), 0o755);
+
+    if (existsSync(join(__dir, "repair-compose-override.sh"))) {
+      await writeFile(
+        s,
+        remoteRepair,
+        normalizeScript(readFileSync(join(__dir, "repair-compose-override.sh"), "utf8")),
+        0o755,
+      );
+    }
+
+    if (existsSync(join(__dir, "configure-mailcow-routes.sh"))) {
+      await writeFile(
+        s,
+        "/tmp/configure-mailcow-routes.sh",
+        normalizeScript(readFileSync(join(__dir, "configure-mailcow-routes.sh"), "utf8")),
+        0o755,
+      );
+    }
+
+    await writeFile(s, remoteScript, patchBrandingScript(readFileSync(scriptPath, "utf8")), 0o755);
+
+    const mailcowDir = env.MAILCOW_DIR || "/opt/mailcow-dockerized";
+    await exec(conn, `MAILCOW_DIR=${mailcowDir} bash ${remoteScript}`);
+  } finally {
+    conn.end();
   }
+}
 
-  const script = readFileSync(scriptPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-
-  const ensureScript = readFileSync(ensureMountsPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  await writeFile(s, remoteEnsureMounts, ensureScript, 0o755);
-  console.log("uploaded ensure-sogo-theme-mounts.sh");
-
-  const repairPath = join(__dir, "repair-compose-override.sh");
-  const remoteRepair = "/tmp/repair-compose-override.sh";
-  if (existsSync(repairPath)) {
-    const repairScript = readFileSync(repairPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    await writeFile(s, remoteRepair, repairScript, 0o755);
-    console.log("uploaded repair-compose-override.sh");
-  }
-
-  const configureRoutes = join(__dir, "configure-mailcow-routes.sh");
-  if (existsSync(configureRoutes)) {
-    const routesScript = readFileSync(configureRoutes, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    await writeFile(s, "/tmp/configure-mailcow-routes.sh", routesScript, 0o755);
-    console.log("uploaded configure-mailcow-routes.sh");
-  }
-
-  const patched = script
-    .replace(
-      'BRANDING_DIR="${SCRIPT_DIR}/../branding"',
-      `BRANDING_DIR="${remoteDir}"`,
-    )
-    .replace(
-      'bash "${SCRIPT_DIR}/ensure-sogo-theme-mounts.sh"',
-      `bash "${remoteEnsureMounts}"`,
-    )
-    .replace(
-      'bash "${SCRIPT_DIR}/repair-compose-override.sh"',
-      `bash ${remoteRepair}`,
-    )
-    .replace(
-      'bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"',
-      `bash /tmp/configure-mailcow-routes.sh`,
-    );
-
-  await writeFile(s, remoteScript, patched, 0o755);
-  console.log("uploaded apply-nive-branding.sh");
-
-  await exec(
-    conn,
-    `MAILCOW_DIR=${env.MAILCOW_DIR || "/opt/mailcow-dockerized"} bash ${remoteScript}`,
-  );
-} finally {
-  conn.end();
+if (isLocalVpsDeploy()) {
+  await deployLocal();
+} else {
+  await deploySsh();
 }

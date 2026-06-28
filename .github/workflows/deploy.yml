@@ -40,12 +40,15 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Mesmo modelo do sistemaloja: runner no VPS Hostinger (sem SSH da nuvem GitHub).
+    runs-on: [self-hosted, Linux, vps-hostinger]
     timeout-minutes: 45
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -62,6 +65,7 @@ jobs:
         working-directory: deploy
         run: node ci-write-env.mjs
         env:
+          DEPLOY_MODE: local_vps
           VPS_IP: ${{ secrets.VPS_IP }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
@@ -80,19 +84,6 @@ jobs:
           EXTRA_MAIL_DOMAIN: ${{ secrets.EXTRA_MAIL_DOMAIN }}
           EXTRA_CLOUDFLARE_ZONE_ID: ${{ secrets.EXTRA_CLOUDFLARE_ZONE_ID }}
           GIT_REPO: ${{ secrets.GIT_REPO }}
-
-      - name: Preflight TCP 22
-        run: |
-          for i in 1 2 3; do
-            if timeout 10 bash -c "echo >/dev/tcp/${{ secrets.VPS_IP }}/22" 2>/dev/null; then
-              echo "Porta 22 acessível"
-              exit 0
-            fi
-            echo "Tentativa $i: porta 22 indisponível, aguardando..."
-            sleep 10
-          done
-          echo "::warning::Porta 22 bloqueada do runner GitHub — libere no hPanel Hostinger"
-          exit 0
 
       - name: Definir e executar deploy
         working-directory: deploy
@@ -129,4 +120,5 @@ jobs:
             node deploy.mjs branding
           fi
         env:
+          DEPLOY_MODE: local_vps
           DEPLOY_DKIM_WAIT_SEC: ${{ vars.DEPLOY_DKIM_WAIT_SEC || '120' }}
