@@ -68,9 +68,11 @@ export function clearSessionCookie(reply: FastifyReply) {
   const expired = new Date(0);
   const base = sessionCookieOptions();
   for (const path of CLEAR_PATHS) {
-    const opts = { ...base, path, maxAge: 0, expires: expired };
-    reply.clearCookie(SESSION_COOKIE, opts);
-    reply.setCookie(SESSION_COOKIE, "", opts);
+    for (const signed of [false, true] as const) {
+      const opts = { ...base, path, maxAge: 0, expires: expired, signed };
+      reply.clearCookie(SESSION_COOKIE, opts);
+      reply.setCookie(SESSION_COOKIE, "", opts);
+    }
   }
 }
 

@@ -67,8 +67,17 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
-  const handleLogout = async (request: Parameters<typeof terminateSession>[0], reply: Parameters<typeof terminateSession>[1]) => {
+  const handleLogout = async (
+    request: Parameters<typeof terminateSession>[0],
+    reply: Parameters<typeof terminateSession>[1],
+  ) => {
     terminateSession(request, reply);
+    const redirect = (request.query as { redirect?: string }).redirect;
+    if (request.method === "GET") {
+      const target =
+        redirect?.startsWith("/mail/") ? redirect : `${config.basePath}/login`.replace(/\/+/g, "/");
+      return reply.redirect(target);
+    }
     return { ok: true };
   };
 

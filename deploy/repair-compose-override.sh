@@ -57,10 +57,10 @@ services:
       - SMTP_PORT=587
       - SIEVE_HOST=dovecot-mailcow
       - SIEVE_PORT=4190
-      - MAILCOW_API_URL=http://nginx-mailcow
+      - MAILCOW_API_URL=https://nginx-mailcow
       - MAILCOW_API_KEY=${MAILCOW_API_KEY}
       - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
-      - MAILCOW_API_TLS_INSECURE=false
+      - MAILCOW_API_TLS_INSECURE=true
       - MAILCOW_DB_HOST=mysql-mailcow
       - MAILCOW_DB_USER=${MAILCOW_DB_USER}
       - MAILCOW_DB_PASS=${MAILCOW_DB_PASS}

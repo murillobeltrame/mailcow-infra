@@ -6,7 +6,8 @@ import { api } from "@/lib/api";
 import type { User } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
 
-const LOGIN_URL = `${import.meta.env.BASE_URL.replace(/\/?$/, "/")}login`;
+const API_BASE = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const LOGIN_URL = `${API_BASE}login`;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -40,14 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    try {
-      await api.logout();
-    } catch {
-      /* encerra localmente mesmo se a rede falhar */
-    }
     queryClient.clear();
     setUser(null);
-    window.location.replace(`${LOGIN_URL}?logout=${Date.now()}`);
+    const target = `${LOGIN_URL}`;
+    window.location.replace(`${API_BASE}api/auth/logout?redirect=${encodeURIComponent(target)}`);
   }, [queryClient]);
 
   const value = useMemo(

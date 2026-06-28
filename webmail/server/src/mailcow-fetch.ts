@@ -21,7 +21,9 @@ export async function mailcowFetch(
     method: init?.method,
     body: init?.body,
     headers,
-    dispatcher: mailcowDispatcher,
   };
+  if (url.startsWith("https:")) {
+    req.dispatcher = mailcowDispatcher;
+  }
   return undiciFetch(url, req) as unknown as Promise<Response>;
 }

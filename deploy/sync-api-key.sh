@@ -86,16 +86,50 @@ if [[ "${VERIFY_BFF}" = "1" ]] && docker ps --format '{{.Names}}' | grep -q '^ni
   bff_ok=false
   for ((i=1; i<=TRIES; i++)); do
     if docker exec nive-mail-web node --input-type=module -e "
-import { getVersion, listDomains } from '/app/dist/mailcow-api.js';
-try {
-  await getVersion();
-  const d = await listDomains();
-  if (!Array.isArray(d) || d.length < 1) throw new Error('listDomains vazio');
-  console.log('BFF API OK:', d.length, 'dominios');
-} catch (e) {
-  console.error('BFF ERRO:', e.message);
-  process.exit(1);
+import http from 'node:http';
+import https from 'node:https';
+
+const base = (process.env.MAILCOW_API_URL || 'https://nginx-mailcow').replace(/\\/\$/, '');
+const host = process.env.MAILCOW_HOSTNAME;
+const key = process.env.MAILCOW_API_KEY;
+const insecure = process.env.MAILCOW_API_TLS_INSECURE !== 'false';
+
+function apiGet(path) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(base + path);
+    const mod = url.protocol === 'https:' ? https : http;
+    const opts = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname + url.search,
+      method: 'GET',
+      headers: { Host: host, 'X-API-Key': key },
+      rejectUnauthorized: url.protocol === 'https:' ? !insecure : undefined,
+    };
+    const req = mod.request(opts, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error('HTTP ' + res.statusCode + ': ' + body.slice(0, 200)));
+          return;
+        }
+        try {
+          resolve(JSON.parse(body));
+        } catch {
+          reject(new Error('Resposta JSON invalida'));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
 }
+
+await apiGet('/api/v1/get/status/version');
+const domains = await apiGet('/api/v1/get/domain/all');
+if (!Array.isArray(domains) || domains.length < 1) throw new Error('listDomains vazio');
+console.log('BFF API OK:', domains.length, 'dominios');
 "; then
       bff_ok=true
       break
