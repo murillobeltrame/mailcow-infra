@@ -5,10 +5,24 @@ MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
 OVERRIDE="${MAILCOW_DIR}/docker-compose.override.yml"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Carrega MAILCOW_API_KEY do mailcow.conf se disponível
+# Carrega credenciais do mailcow.conf se disponível
 MAILCOW_API_KEY="${MAILCOW_API_KEY:-}"
-if [[ -z "${MAILCOW_API_KEY}" && -f "${MAILCOW_DIR}/mailcow.conf" ]]; then
-  MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+MAILCOW_DB_USER="${MAILCOW_DB_USER:-}"
+MAILCOW_DB_PASS="${MAILCOW_DB_PASS:-}"
+MAILCOW_DB_NAME="${MAILCOW_DB_NAME:-}"
+if [[ -f "${MAILCOW_DIR}/mailcow.conf" ]]; then
+  if [[ -z "${MAILCOW_API_KEY}" ]]; then
+    MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+  fi
+  if [[ -z "${MAILCOW_DB_USER}" ]]; then
+    MAILCOW_DB_USER="$(grep '^DBUSER=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+  fi
+  if [[ -z "${MAILCOW_DB_PASS}" ]]; then
+    MAILCOW_DB_PASS="$(grep '^DBPASS=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+  fi
+  if [[ -z "${MAILCOW_DB_NAME}" ]]; then
+    MAILCOW_DB_NAME="$(grep '^DBNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+  fi
 fi
 
 cat > "${OVERRIDE}" <<EOF
@@ -42,6 +56,10 @@ services:
       - SIEVE_PORT=4190
       - MAILCOW_API_URL=https://nginx-mailcow
       - MAILCOW_API_KEY=${MAILCOW_API_KEY}
+      - MAILCOW_DB_HOST=mysql-mailcow
+      - MAILCOW_DB_USER=${MAILCOW_DB_USER}
+      - MAILCOW_DB_PASS=${MAILCOW_DB_PASS}
+      - MAILCOW_DB_NAME=${MAILCOW_DB_NAME}
       - COOKIE_SECRET=\${NIVE_MAIL_COOKIE_SECRET:-change-me-in-production}
     labels:
       - traefik.enable=false

@@ -24,6 +24,10 @@ export const config = {
   mailcowApiUrl: (process.env.MAILCOW_API_URL ?? "https://nginx-mailcow").replace(/\/$/, ""),
   mailcowApiKey: process.env.MAILCOW_API_KEY ?? "",
   mailcowHostname: process.env.MAILCOW_HOSTNAME ?? "mail.nivesistemas.com.br",
+  mailcowDbHost: process.env.MAILCOW_DB_HOST ?? "mysql-mailcow",
+  mailcowDbUser: process.env.MAILCOW_DB_USER ?? "",
+  mailcowDbPass: process.env.MAILCOW_DB_PASS ?? "",
+  mailcowDbName: process.env.MAILCOW_DB_NAME ?? "",
 };
 
 export const mailTlsOptions = {
