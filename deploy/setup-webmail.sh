@@ -37,7 +37,7 @@ mkdir -p "$(dirname "${NGINX_CUSTOM}")"
 cat > "${NGINX_CUSTOM}" <<'NGINX'
 # Nive Mail Web — proxy para webmail moderno (React + IMAP)
 location = /mail {
-    return 301 /mail/;
+    return 301 /mail/login;
 }
 
 location ^~ /mail/ {
@@ -66,5 +66,5 @@ curl -sk -o /dev/null -w "    /mail/ -> HTTP %{http_code}\n" -H "Host: ${HOST}" 
 docker ps --format '    {{.Names}}: {{.Status}}' | grep nive-mail-web || echo "    AVISO: container nive-mail-web não encontrado"
 
 echo ""
-echo "Webmail moderno: https://${HOST}/mail/"
+echo "Portal Nive Mail: https://${HOST}/mail/login"
 echo "SOGo (calendário/contatos): https://${HOST}/SOGo/"

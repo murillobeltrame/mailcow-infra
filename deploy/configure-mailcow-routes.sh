@@ -83,7 +83,10 @@ fi
 echo "==> Nginx: redirects painéis legados + SOGo Mail → portal ..."
 mkdir -p data/conf/nginx
 cat > data/conf/nginx/site.nive-mail-redirects.custom <<'NGINX'
-# Portal Nive Mail — cutover painéis PHP e SOGo Mail
+# Portal Nive Mail — raiz e painéis PHP legados → /mail/login ou portal React
+location = / {
+    return 302 /mail/login;
+}
 location = /user {
     return 302 /mail/account;
 }
@@ -129,9 +132,9 @@ fi
 
 echo ""
 echo "Rotas configuradas (portal unificado):"
+echo "  Login:                 https://mail.nivesistemas.com.br/mail/login"
 echo "  Webmail:               https://mail.nivesistemas.com.br/mail/"
 echo "  Minha conta:           https://mail.nivesistemas.com.br/mail/account"
 echo "  Admin global:          https://mail.nivesistemas.com.br/mail/admin"
 echo "  Admin de domínio:      https://mail.nivesistemas.com.br/mail/domain"
 echo "  Calendário/contactos:  https://mail.nivesistemas.com.br/mail/calendar | /contacts"
-echo "  Login Mailcow (FIDO2): https://mail.nivesistemas.com.br/"

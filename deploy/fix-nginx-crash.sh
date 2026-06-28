@@ -7,7 +7,10 @@ cd "${MAILCOW_DIR}"
 echo "==> Restaurando site.nive-mail-redirects.custom (sem limit_except invalido)..."
 mkdir -p data/conf/nginx
 cat > data/conf/nginx/site.nive-mail-redirects.custom <<'NGINX'
-# Portal Nive Mail — cutover painéis PHP e SOGo Mail
+# Portal Nive Mail — raiz e painéis PHP legados → /mail/login ou portal React
+location = / {
+    return 302 /mail/login;
+}
 location = /user {
     return 302 /mail/account;
 }
@@ -45,7 +48,7 @@ NG=$(docker ps --filter "name=nginx-mailcow" --format "{{.Names}}: {{.Status}}" 
 echo "Status: ${NG}"
 
 HOST=$(grep '^MAILCOW_HOSTNAME=' mailcow.conf | cut -d= -f2- | tr -d '\r"')
-for path in / /mail/ /mail/health; do
+for path in / /mail/login /mail/ /mail/health; do
   code=$(curl -sk -o /dev/null -w "%{http_code}" -H "Host: ${HOST}" "https://127.0.0.1${path}" --max-time 10 || echo "000")
   echo "GET ${path} -> HTTP ${code}"
 done

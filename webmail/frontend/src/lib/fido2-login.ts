@@ -5,7 +5,7 @@
 import type { User } from "@/lib/api";
 import { api } from "@/lib/api";
 
-const MAILCOW_LOGIN_URL = "/";
+const MAILCOW_FIDO2_URL = "/index.php";
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -88,7 +88,7 @@ export async function loginWithFido2(): Promise<User> {
   formData.append("token", token);
   formData.append("verify_fido2_login", "true");
 
-  const verifyRes = await fetch(MAILCOW_LOGIN_URL, {
+  const verifyRes = await fetch(MAILCOW_FIDO2_URL, {
     method: "POST",
     body: formData,
     cache: "no-cache",

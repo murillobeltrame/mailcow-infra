@@ -1,7 +1,6 @@
-/** URLs do portal Nive Mail e legado Mailcow (FIDO2 / reset senha) */
+/** URLs do portal Nive Mail (backend Mailcow só via API/FIDO2) */
 export const panelUrls = {
-  /** Login Mailcow PHP — FIDO2 e reset senha */
-  login: "/",
+  login: "/mail/login",
   resetPassword: "/reset-password",
   /** Portal React (preferir estes) */
   webmail: "/mail/",
