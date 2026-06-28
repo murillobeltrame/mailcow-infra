@@ -28,7 +28,7 @@ export type ClientMailSettings = {
 };
 
 export function buildClientMailSettings(email: string): ClientMailSettings {
-  const host = config.mailcowHostname;
+  const host = config.clientMailHost;
 
   return {
     email,

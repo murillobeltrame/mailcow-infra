@@ -24,6 +24,9 @@ export const config = {
   mailcowApiUrl: (process.env.MAILCOW_API_URL ?? "http://nginx-mailcow").replace(/\/$/, ""),
   mailcowApiKey: process.env.MAILCOW_API_KEY ?? "",
   mailcowHostname: process.env.MAILCOW_HOSTNAME ?? "mail.nivesistemas.com.br",
+  /** Host IMAP/SMTP exibido a clientes externos (padrão = MAILCOW_HOSTNAME no certificado) */
+  clientMailHost:
+    process.env.CLIENT_MAIL_HOST ?? process.env.MAILCOW_HOSTNAME ?? "mail.nivesistemas.com.br",
   mailcowApiTlsInsecure: process.env.MAILCOW_API_TLS_INSECURE !== "false",
   mailcowDbHost: process.env.MAILCOW_DB_HOST ?? "mysql-mailcow",
   mailcowDbUser: process.env.MAILCOW_DB_USER ?? "",

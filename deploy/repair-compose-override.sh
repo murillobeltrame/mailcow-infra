@@ -19,6 +19,7 @@ fi
 
 MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
 MAILCOW_HOSTNAME="$(grep '^MAILCOW_HOSTNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r"')"
+CLIENT_MAIL_HOST="${CLIENT_MAIL_HOST:-${MAILCOW_HOSTNAME}}"
 MAILCOW_DB_USER="$(grep '^DBUSER=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
 MAILCOW_DB_PASS="$(grep '^DBPASS=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
 MAILCOW_DB_NAME="$(grep '^DBNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
@@ -48,9 +49,10 @@ services:
       - NODE_ENV=production
       - PORT=8080
       - COOKIE_PATH=/mail/
-      - IMAP_TLS_SERVERNAME=mail.nivesistemas.com.br
+      - CLIENT_MAIL_HOST=${CLIENT_MAIL_HOST}
+      - IMAP_TLS_SERVERNAME=${MAILCOW_HOSTNAME}
       - IMAP_TLS_REJECT_UNAUTHORIZED=false
-      - SMTP_TLS_SERVERNAME=mail.nivesistemas.com.br
+      - SMTP_TLS_SERVERNAME=${MAILCOW_HOSTNAME}
       - IMAP_HOST=dovecot-mailcow
       - IMAP_PORT=993
       - SMTP_HOST=postfix-mailcow

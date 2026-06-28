@@ -122,6 +122,9 @@ console.log(`    hostname mail: ${mailHost}`);
 
 await upsertRecord(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, "A", mailHost, VPS_IP);
 
+const smtpHost = mailHost.replace(/^mail\./, "smtp.");
+await upsertRecord(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, "A", smtpHost, VPS_IP);
+
 for (const sub of ["autodiscover", "autoconfig", "mta-sts"]) {
   await upsertRecord(
     CLOUDFLARE_API_TOKEN,

@@ -26,6 +26,7 @@ on:
           - tune
           - ssl
           - ssl-fix
+          - fix-mail-cert
           - reset-admin
           - bootstrap
           - migrate-email

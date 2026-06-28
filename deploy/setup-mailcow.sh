@@ -52,7 +52,11 @@ set_conf SKIP_SOGO y
 set_conf HTTP_PORT 80
 set_conf HTTPS_PORT 443
 set_conf MAILCOW_TZ "${MAILCOW_TZ}"
-set_conf ADDITIONAL_SAN ""
+if [[ "${MAILCOW_HOSTNAME}" == mail.* ]]; then
+  set_conf ADDITIONAL_SAN "smtp.${MAILCOW_HOSTNAME#mail.}"
+else
+  set_conf ADDITIONAL_SAN ""
+fi
 # Evita conflito com whatsapp-evolution_internal (172.22.0.0/16)
 set_conf IPV4_NETWORK "${MAILCOW_IPV4_NETWORK:-172.23.1}"
 # IPv6 Docker desnecessário para SMTP/IMAP; evita conflito de pools

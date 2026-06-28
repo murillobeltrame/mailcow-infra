@@ -160,6 +160,8 @@ Com runner self-hosted, `VPS_SSH_PASS` **não é obrigatório** (deploy roda loc
 
 **SMTP/IMAP com proxy no `mail.*`:** use `smtp.nivesistemas.com.br` (DNS only). O host `mail.nivesistemas.com.br` está proxied no Cloudflare — portas 465/587 **não funcionam** nele. Rode `node ensure-smtp-dns.mjs` se o registro ainda não existir.
 
+**Erro TLS `Hostname/IP does not match certificate's altnames`:** o certificado não inclui o host usado (comum com proxy Cloudflare no `mail.*`). Rode `node deploy.mjs fix-mail-cert` — coloca `mail.*` em DNS-only, cria `smtp.*` e renova o certificado. Depois use `mail.nivesistemas.com.br` como servidor SMTP/IMAP.
+
 ---
 
 ## Scripts

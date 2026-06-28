@@ -154,6 +154,11 @@ const commands = {
     runSsh("fix-ssl.sh", getEnv());
   },
 
+  "fix-mail-cert"() {
+    getEnv();
+    runNode("fix-mail-cert.mjs");
+  },
+
   update() {
     maybePipeline("update");
     const env = getEnv();
@@ -210,6 +215,7 @@ Mailcow Nive Mail — deploy
   node deploy.mjs dns-dkim          + DKIM
   node deploy.mjs migrate-email     Migração de domínios/e-mail
   node deploy.mjs ssl-fix           Corrige HTTPS
+  node deploy.mjs fix-mail-cert     Cert SMTP/IMAP (SAN + DNS)
   node deploy.mjs test-api          Testa API Mailcow
   node deploy.mjs branding-local    Preview logo/CSS (dev, sem commit)
 
