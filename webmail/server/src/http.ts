@@ -2,6 +2,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "./config.js";
 import { parseSessionToken, sessionToToken, touchSession, type PortalSession, type UserRole } from "./session.js";
 
+const SESSION_REFRESHED = Symbol("sessionRefreshed");
+
 export const SESSION_COOKIE = "nive_mail_session";
 export const COOKIE_PATH = process.env.COOKIE_PATH ?? "/mail/";
 
@@ -45,6 +47,18 @@ export function requireSession(request: FastifyRequest): PortalSession {
     throw err;
   }
   return touchSession(session, config.sessionTtlMs);
+}
+
+/** Renova TTL da sessão no cookie (stateless). */
+export function refreshSessionCookie(reply: FastifyReply, session: PortalSession): PortalSession {
+  const refreshed = touchSession(session, config.sessionTtlMs);
+  setSessionCookie(reply, refreshed);
+  (reply as FastifyReply & { [SESSION_REFRESHED]?: boolean })[SESSION_REFRESHED] = true;
+  return refreshed;
+}
+
+export function wasSessionRefreshed(reply: FastifyReply): boolean {
+  return (reply as FastifyReply & { [SESSION_REFRESHED]?: boolean })[SESSION_REFRESHED] === true;
 }
 
 export function requireRoleSession(request: FastifyRequest, ...roles: UserRole[]): PortalSession {

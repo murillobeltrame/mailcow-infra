@@ -7,7 +7,7 @@ import {
   getMailbox,
   listAppPasswords,
 } from "../mailcow-api.js";
-import { handleRouteError, requireRoleSession } from "../http.js";
+import { handleRouteError, refreshSessionCookie, requireRoleSession } from "../http.js";
 import { getActiveSieveScript, listSieveScripts, putSieveScript } from "../sieve-service.js";
 
 export async function registerAccountRoutes(app: FastifyInstance) {
@@ -83,6 +83,7 @@ export async function registerAccountRoutes(app: FastifyInstance) {
         },
       });
       if (body.password) session.password = body.password;
+      refreshSessionCookie(reply, session);
       return { ok: true };
     } catch (err) {
       return handleRouteError(reply, err);

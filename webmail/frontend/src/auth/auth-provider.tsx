@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext, type LoginMode } from "./auth-context";
-import { api } from "@/lib/api";
+import { ApiError, api, runWithoutUnauthorizedHandler, setUnauthorizedHandler } from "@/lib/api";
 import type { User } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
 
@@ -23,11 +23,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      queryClient.clear();
+      setUser(null);
+      window.location.replace(LOGIN_URL);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [queryClient]);
+
   const login = useCallback(
     async (loginId: string, password: string, loginAs: LoginMode) => {
-      const u = await api.login(loginId, password, loginAs);
-      setUser(u);
-      navigate(defaultRouteForRole(u.role), { replace: true });
+      await api.login(loginId, password, loginAs);
+      const verified = await runWithoutUnauthorizedHandler(() => api.me());
+      if (!verified) {
+        throw new ApiError("Não foi possível iniciar a sessão. Tente novamente.", 401);
+      }
+      setUser(verified);
+      navigate(defaultRouteForRole(verified.role), { replace: true });
     },
     [navigate],
   );
@@ -41,10 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      /* cookie pode já ter sido limpo */
+    }
     queryClient.clear();
     setUser(null);
-    const target = `${LOGIN_URL}`;
-    window.location.replace(`${API_BASE}api/auth/logout?redirect=${encodeURIComponent(target)}`);
   }, [queryClient]);
 
   const value = useMemo(

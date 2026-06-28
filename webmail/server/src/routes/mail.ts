@@ -18,7 +18,11 @@ function mailSession(request: FastifyRequest) {
   const session = requireSession(request);
   const mail = asMailSession(session);
   if (!mail) {
-    const err = new Error("Webmail disponível apenas para usuários de caixa") as Error & {
+    const err = new Error(
+      session.role !== "user"
+        ? "Webmail disponível apenas para usuários de caixa"
+        : "Sessão sem credenciais IMAP — faça login com e-mail e senha",
+    ) as Error & {
       statusCode: number;
     };
     err.statusCode = 403;

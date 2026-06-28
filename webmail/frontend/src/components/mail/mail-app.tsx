@@ -100,8 +100,10 @@ export function MailApp() {
           folders={mailbox.folders}
           activeFolder={mailbox.activeFolder}
           loading={mailbox.foldersLoading}
+          error={mailbox.foldersError}
           onSelectFolder={mailbox.selectFolder}
           onCompose={openCompose}
+          onRetry={mailbox.refetchFolders}
         />
 
         {foldersOpen && (
@@ -117,11 +119,13 @@ export function MailApp() {
                 folders={mailbox.folders}
                 activeFolder={mailbox.activeFolder}
                 loading={mailbox.foldersLoading}
+                error={mailbox.foldersError}
                 onSelectFolder={selectFolder}
                 onCompose={() => {
                   openCompose();
                   setFoldersOpen(false);
                 }}
+                onRetry={mailbox.refetchFolders}
                 className="h-full rounded-none rounded-r-2xl"
               />
             </div>

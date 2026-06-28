@@ -63,7 +63,7 @@
   }
 
   .mail-shell {
-    @apply flex h-dvh flex-col overflow-hidden bg-background p-2 sm:p-3;
+    @apply flex h-full min-h-0 flex-col overflow-hidden bg-background p-2 sm:p-3;
   }
 
   .mail-workspace {

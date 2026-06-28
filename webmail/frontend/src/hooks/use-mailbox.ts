@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ApiError, api } from "@/lib/api";
 import { mailKeys } from "@/lib/query-keys";
@@ -19,7 +19,21 @@ export function useMailbox() {
   const foldersQuery = useQuery({
     queryKey: mailKeys.folders,
     queryFn: () => api.folders().then((r) => r.folders),
+    retry: 1,
   });
+
+  useEffect(() => {
+    if (!foldersQuery.error) return;
+    const msg =
+      foldersQuery.error instanceof ApiError
+        ? foldersQuery.error.message
+        : "Não foi possível carregar as pastas";
+    toast.error(msg);
+  }, [foldersQuery.error]);
+
+  const refetchFolders = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: mailKeys.folders });
+  }, [queryClient]);
 
   const messagesQuery = useInfiniteQuery({
     queryKey: mailKeys.messages(activeFolder, searchQuery),
@@ -197,5 +211,6 @@ export function useMailbox() {
     bulkDeleting: bulkDeleteMutation.isPending,
     foldersError: foldersQuery.error,
     messagesError: messagesQuery.error,
+    refetchFolders,
   };
 }

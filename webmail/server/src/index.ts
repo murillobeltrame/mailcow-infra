@@ -4,6 +4,8 @@ import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import fs from "node:fs";
 import { config } from "./config.js";
+import { getRequestSession, refreshSessionCookie, wasSessionRefreshed } from "./http.js";
+import { touchSession } from "./session.js";
 import { registerAccountRoutes } from "./routes/account.js";
 import { registerAdminRoutes, registerDomainRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -15,6 +17,15 @@ const app = Fastify({ logger: true });
 
 await app.register(cors, { origin: true, credentials: true });
 await app.register(cookie, { secret: config.cookieSecret, hook: "onRequest" });
+
+app.addHook("onSend", async (request, reply, payload) => {
+  if (!request.url.startsWith("/api/") || reply.statusCode >= 400 || wasSessionRefreshed(reply)) {
+    return payload;
+  }
+  const session = getRequestSession(request);
+  if (session) refreshSessionCookie(reply, touchSession(session, config.sessionTtlMs));
+  return payload;
+});
 
 app.get("/health", async () => ({ ok: true, service: "nive-mail-portal" }));
 

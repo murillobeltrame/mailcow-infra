@@ -5,8 +5,8 @@ import {
   getRequestSession,
   handleRouteError,
   publicUser,
+  refreshSessionCookie,
   requireSession,
-  setSessionCookie,
   terminateSession,
 } from "../http.js";
 import { createSession } from "../session.js";
@@ -42,7 +42,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         },
         config.sessionTtlMs,
       );
-      setSessionCookie(reply, session);
+      refreshSessionCookie(reply, session);
       return publicUser(session);
     } catch (err) {
       return handleRouteError(reply, err);
@@ -60,7 +60,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         name: body.subject.split("@")[0],
         password: "",
       }, config.sessionTtlMs);
-      setSessionCookie(reply, session);
+      refreshSessionCookie(reply, session);
       return publicUser(session);
     } catch (err) {
       return handleRouteError(reply, err);

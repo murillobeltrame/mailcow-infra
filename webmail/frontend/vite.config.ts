@@ -15,6 +15,11 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.VITE_PORT ?? "5176", 10),
     proxy: {
+      "/mail/api": {
+        target: apiTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/mail/, ""),
+      },
       "/api": { target: apiTarget, changeOrigin: true },
       "/health": { target: apiTarget, changeOrigin: true },
     },

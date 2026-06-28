@@ -27,8 +27,8 @@ export function AppShell() {
 
   const handleLogout = async () => {
     try {
-      await logout();
       toast.success("Sessão encerrada");
+      await logout();
     } catch {
       toast.error("Erro ao sair");
     }
@@ -71,7 +71,7 @@ export function AppShell() {
           </button>
         </div>
       </header>
-      <main className="min-h-0 flex-1">
+      <main className="flex min-h-0 flex-1 flex-col">
         <Outlet />
       </main>
     </div>

@@ -11,6 +11,22 @@ export class ApiError extends Error {
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 
+let onUnauthorized: (() => void) | null = null;
+let suppressUnauthorized = false;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
+export async function runWithoutUnauthorizedHandler<T>(fn: () => Promise<T>): Promise<T> {
+  suppressUnauthorized = true;
+  try {
+    return await fn();
+  } finally {
+    suppressUnauthorized = false;
+  }
+}
+
 function apiUrl(path: string): string {
   return `${API_BASE}${path.replace(/^\//, "")}`;
 }
@@ -26,6 +42,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401 && onUnauthorized && !suppressUnauthorized) onUnauthorized();
     throw new ApiError((data as { error?: string }).error ?? "Erro na requisição", res.status);
   }
   return data as T;
