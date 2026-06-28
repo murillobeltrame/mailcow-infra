@@ -68,6 +68,11 @@ if [[ -d "${SOGO_BRANDING}" ]]; then
   fi
 fi
 
+if [[ -f "${SCRIPT_DIR}/configure-mailcow-routes.sh" ]]; then
+  echo "==> Configurando rotas webmail + painel Mailcow..."
+  bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"
+fi
+
 echo "==> Idioma padrão: português (Brasil)..."
 install -m 0644 "${BRANDING_DIR}/vars.local.inc.php" "${WEB}/inc/vars.local.inc.php"
 

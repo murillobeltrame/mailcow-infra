@@ -104,12 +104,10 @@ Opcionais com padrão: `VPS_IP`, `MAILCOW_HOSTNAME`, `MAIL_DOMAIN`, etc. — vej
 | Objetivo | Ação recomendada |
 |----------|------------------|
 | Mudou webmail / branding / deploy | `git push` → Actions |
+| Ler/enviar e-mail | https://mail.nivesistemas.com.br/mail/ |
+| Admin (RAM, caixas, domínios) | https://mail.nivesistemas.com.br/ → login admin |
+| Conta de usuário (senha, apps) | https://mail.nivesistemas.com.br/user |
 | Investigar problema no VPS | `node deploy.mjs ssh <script.sh>` |
-| Validar produção | `node deploy.mjs validate` ou workflow `validate` |
-| Ajustar DNS / DKIM | `node deploy.mjs dns-dkim` |
-| Preview logo antes do commit | `node deploy.mjs branding-local` |
-| Atualizar Mailcow upstream | workflow `update` |
-| VPS novo | workflow `full` |
 
 ---
 

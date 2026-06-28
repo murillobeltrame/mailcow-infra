@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnv, connectSsh } from "./lib/env.mjs";
@@ -99,6 +99,7 @@ try {
   for (const [local, name] of [
     [scriptPath, "setup-webmail.sh"],
     [redirectScript, "redirect-webmail.sh"],
+    [join(__dir, "configure-mailcow-routes.sh"), "configure-mailcow-routes.sh"],
     [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh"],
   ]) {
     const script = readFileSync(local, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -114,9 +115,16 @@ try {
     await writeFile(s, `/tmp/${name}`, patched, 0o755);
   }
 
+  const routesPath = join(__dir, "configure-mailcow-routes.sh");
+  if (existsSync(routesPath)) {
+    const routesScript = readFileSync(routesPath, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    await writeFile(s, "/tmp/configure-mailcow-routes.sh", routesScript, 0o755);
+    console.log("uploaded configure-mailcow-routes.sh");
+  }
+
   const mailcowDir = env.MAILCOW_DIR || "/opt/mailcow-dockerized";
   await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/setup-webmail.sh`);
-  await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/redirect-webmail.sh`);
+  await exec(conn, `MAILCOW_DIR=${mailcowDir} bash /tmp/configure-mailcow-routes.sh`);
 } finally {
   conn.end();
 }

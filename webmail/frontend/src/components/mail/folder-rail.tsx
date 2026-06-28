@@ -1,7 +1,8 @@
-import { LogOut, PenLine } from "lucide-react";
+import { LogOut, PenLine, Settings2 } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getFolderIcon } from "@/lib/folder-icons";
+import { panelUrls } from "@/lib/panel-urls";
 import type { Folder } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +78,14 @@ export function FolderRail({
       </div>
 
       <div className="mt-2 flex flex-col items-center gap-1 border-t border-border/60 pt-3">
+        <a
+          href={panelUrls.user}
+          title="Painel da conta"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          aria-label="Painel da conta"
+        >
+          <Settings2 className="h-4 w-4" />
+        </a>
         <ThemeToggle variant="ghost" className="h-10 w-10 rounded-xl" />
         <button
           type="button"

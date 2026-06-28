@@ -117,6 +117,13 @@ try {
     console.log("uploaded repair-compose-override.sh");
   }
 
+  const configureRoutes = join(__dir, "configure-mailcow-routes.sh");
+  if (existsSync(configureRoutes)) {
+    const routesScript = readFileSync(configureRoutes, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    await writeFile(s, "/tmp/configure-mailcow-routes.sh", routesScript, 0o755);
+    console.log("uploaded configure-mailcow-routes.sh");
+  }
+
   const patched = script
     .replace(
       'BRANDING_DIR="${SCRIPT_DIR}/../branding"',
@@ -129,6 +136,10 @@ try {
     .replace(
       'bash "${SCRIPT_DIR}/repair-compose-override.sh"',
       `bash ${remoteRepair}`,
+    )
+    .replace(
+      'bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"',
+      `bash /tmp/configure-mailcow-routes.sh`,
     );
 
   await writeFile(s, remoteScript, patched, 0o755);

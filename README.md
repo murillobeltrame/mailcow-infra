@@ -14,7 +14,10 @@ Repositório de deploy e operação do **Nive Mail** (Mailcow self-hosted) no VP
 | Domínio principal | `nivesistemas.com.br` |
 | Domínio adicional | `corelycommerce.com.br` |
 | Webmail moderno | https://mail.nivesistemas.com.br/mail/ — React + Tailwind |
-| Webmail SOGo (calendário/contatos) | https://mail.nivesistemas.com.br/SOGo |
+| Painel admin (RAM, caixas, domínios) | https://mail.nivesistemas.com.br/admin |
+| Painel usuário (conta, senha, apps) | https://mail.nivesistemas.com.br/user |
+| Login Mailcow (admin + usuário) | https://mail.nivesistemas.com.br/ |
+| Calendário / contactos (SOGo) | https://mail.nivesistemas.com.br/SOGo |
 | Login admin | `admin` + senha em `MAILCOW_PASS` (secret GitHub) |
 | Nome do painel | **Nive Mail** |
 | Idioma padrão | **Português (Brasil)** — painel admin e SOGo |
