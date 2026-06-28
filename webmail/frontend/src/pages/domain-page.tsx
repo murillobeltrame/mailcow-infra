@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, type MailboxRow } from "@/lib/api";
+import { MailboxListTable } from "@/components/admin/mailbox-list-table";
 import { asArray } from "@/lib/utils";
 
 export function DomainPage() {
@@ -58,9 +59,7 @@ export function DomainPage() {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro ao criar caixa"),
   });
 
-  const mailboxes = asArray<{ username?: string; name?: string; active?: string }>(
-    mailboxesQuery.data?.mailboxes,
-  );
+  const mailboxes = asArray<MailboxRow>(mailboxesQuery.data?.mailboxes);
 
   const isDomainAdmin = user?.role === "domainadmin";
 
@@ -143,29 +142,13 @@ export function DomainPage() {
         <h2 className="mb-4 text-lg font-medium">Caixas existentes</h2>
         {!domain ? (
           <p className="text-sm text-muted-foreground">Selecione um domínio.</p>
-        ) : mailboxesQuery.isLoading ? (
-          <Skeleton className="h-48 w-full" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">E-mail</th>
-                  <th className="pb-2 pr-4 font-medium">Nome</th>
-                  <th className="pb-2 font-medium">Ativo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mailboxes.map((m) => (
-                  <tr key={m.username} className="border-b border-border/40">
-                    <td className="py-2 pr-4">{m.username}</td>
-                    <td className="py-2 pr-4">{m.name ?? "—"}</td>
-                    <td className="py-2">{m.active === "1" ? "Sim" : "Não"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <MailboxListTable
+            mailboxes={mailboxes}
+            loading={mailboxesQuery.isLoading}
+            scope="domain"
+            onChanged={() => qc.invalidateQueries({ queryKey: ["domain", "mailboxes", domain] })}
+          />
         )}
       </section>
     </div>

@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError, api, type AdminDashboard, type DomainAdminRow } from "@/lib/api";
+import { ApiError, api, type AdminDashboard, type DomainAdminRow, type MailboxRow } from "@/lib/api";
+import { MailboxListTable } from "@/components/admin/mailbox-list-table";
 import { asArray } from "@/lib/utils";
 
 function StatCard({
@@ -149,9 +150,7 @@ export function AdminPage() {
   const dash = dashboardQuery.data as AdminDashboard | undefined;
   const domains = asArray<DomainRow>(domainsQuery.data);
   const domainAdmins = asArray<DomainAdminRow>(domainAdminsQuery.data);
-  const mailboxes = asArray<{ username?: string; name?: string; quota_used?: string; quota?: string }>(
-    mailboxesQuery.data,
-  );
+  const mailboxes = asArray<MailboxRow>(mailboxesQuery.data);
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6">
@@ -485,32 +484,14 @@ export function AdminPage() {
         </Button>
 
         {mbDomain && (
-          <div className="mt-8 overflow-x-auto">
+          <div className="mt-8">
             <h3 className="mb-3 text-sm font-medium">Caixas em {mbDomain}</h3>
-            {mailboxesQuery.isLoading ? (
-              <Skeleton className="h-24 w-full" />
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 text-left text-muted-foreground">
-                    <th className="pb-2 pr-4 font-medium">E-mail</th>
-                    <th className="pb-2 pr-4 font-medium">Nome</th>
-                    <th className="pb-2 font-medium">Quota</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mailboxes.map((m) => (
-                    <tr key={m.username} className="border-b border-border/40">
-                      <td className="py-2 pr-4">{m.username}</td>
-                      <td className="py-2 pr-4">{m.name ?? "—"}</td>
-                      <td className="py-2">
-                        {m.quota_used ?? "0"} / {m.quota ?? "∞"} MB
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            <MailboxListTable
+              mailboxes={mailboxes}
+              loading={mailboxesQuery.isLoading}
+              scope="admin"
+              onChanged={() => qc.invalidateQueries({ queryKey: ["admin", "mailboxes", mbDomain] })}
+            />
           </div>
         )}
       </section>

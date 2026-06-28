@@ -138,11 +138,15 @@ export async function listAliases(domain?: string) {
 }
 
 export async function editMailbox(attrs: Record<string, unknown>) {
-  return mailcowRequest("POST", "edit/mailbox", attrs);
+  const data = await mailcowRequest("POST", "edit/mailbox", attrs);
+  assertMailcowSuccess(data);
+  return data;
 }
 
 export async function addMailbox(attrs: Record<string, unknown>) {
-  return mailcowRequest("POST", "add/mailbox", attrs);
+  const data = await mailcowRequest("POST", "add/mailbox", attrs);
+  assertMailcowSuccess(data);
+  return data;
 }
 
 export async function addDomain(attrs: Record<string, unknown>) {
@@ -187,6 +191,30 @@ export async function deleteDomainAdmin(usernames: string[]) {
   const data = await mailcowRequest("POST", "delete/domain-admin", usernames);
   assertMailcowSuccess(data);
   return data;
+}
+
+export async function deleteMailbox(emails: string[]) {
+  const data = await mailcowRequest("POST", "delete/mailbox", emails);
+  assertMailcowSuccess(data);
+  return data;
+}
+
+export function buildMailboxEditPayload(body: {
+  email: string;
+  name?: string;
+  quota?: string | number;
+  active?: boolean;
+  password?: string;
+}) {
+  const attr: Record<string, unknown> = {};
+  if (body.name !== undefined) attr.name = body.name;
+  if (body.quota !== undefined && body.quota !== "") attr.quota = String(body.quota);
+  if (body.active !== undefined) attr.active = body.active ? "1" : "0";
+  if (body.password) {
+    attr.password = body.password;
+    attr.password2 = body.password;
+  }
+  return { items: [body.email.trim().toLowerCase()], attr };
 }
 
 export async function listAppPasswords(mailbox: string) {

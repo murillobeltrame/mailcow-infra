@@ -72,6 +72,14 @@ export type DomainAdminRow = {
   tfa_active?: string;
 };
 
+export type MailboxRow = {
+  username?: string;
+  name?: string;
+  active?: string;
+  quota?: string;
+  quota_used?: string;
+};
+
 export type MailboxProfile = {
   username?: string;
   name?: string;
@@ -215,6 +223,24 @@ export const api = {
       }),
     });
   },
+  adminUpdateMailbox(data: {
+    email: string;
+    name?: string;
+    quota?: string;
+    active?: boolean;
+    password?: string;
+  }) {
+    return request<{ ok: boolean }>("/api/admin/mailboxes", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+  adminDeleteMailbox(email: string) {
+    return request<{ ok: boolean }>("/api/admin/mailboxes", {
+      method: "DELETE",
+      body: JSON.stringify({ email }),
+    });
+  },
   adminDomainAdmins() {
     return request<{ domainAdmins: DomainAdminRow[] }>("/api/admin/domain-admins");
   },
@@ -268,6 +294,24 @@ export const api = {
         force_pw_update: "0",
         password2: data.password,
       }),
+    });
+  },
+  domainUpdateMailbox(data: {
+    email: string;
+    name?: string;
+    quota?: string;
+    active?: boolean;
+    password?: string;
+  }) {
+    return request<{ ok: boolean }>("/api/domain/mailboxes", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+  domainDeleteMailbox(email: string) {
+    return request<{ ok: boolean }>("/api/domain/mailboxes", {
+      method: "DELETE",
+      body: JSON.stringify({ email }),
     });
   },
   changePassword(password: string, password2?: string) {

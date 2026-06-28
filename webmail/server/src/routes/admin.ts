@@ -4,7 +4,9 @@ import {
   addDomainAdmin,
   addMailbox,
   assertSessionCanAccessDomain,
+  buildMailboxEditPayload,
   deleteDomainAdmin,
+  deleteMailbox,
   editDomainAdmin,
   editMailbox,
   getContainerStatus,
@@ -120,8 +122,29 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   app.patch("/api/admin/mailboxes", async (request, reply) => {
     try {
       requireRoleSession(request, "admin");
-      const body = request.body as Record<string, unknown>;
-      await editMailbox(body);
+      const body = request.body as {
+        email?: string;
+        name?: string;
+        quota?: string | number;
+        active?: boolean;
+        password?: string;
+      };
+      const email = body.email?.trim().toLowerCase();
+      if (!email) return reply.status(400).send({ error: "E-mail da caixa é obrigatório" });
+      await editMailbox(buildMailboxEditPayload({ ...body, email }));
+      return { ok: true };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.delete("/api/admin/mailboxes", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      const body = request.body as { email?: string };
+      const email = body.email?.trim().toLowerCase();
+      if (!email) return reply.status(400).send({ error: "E-mail da caixa é obrigatório" });
+      await deleteMailbox([email]);
       return { ok: true };
     } catch (err) {
       return handleRouteError(reply, err);
@@ -271,13 +294,33 @@ export async function registerDomainRoutes(app: FastifyInstance) {
   app.patch("/api/domain/mailboxes", async (request, reply) => {
     try {
       const session = requireRoleSession(request, "domainadmin", "admin");
-      const body = request.body as { items?: string[]; attr?: Record<string, unknown> };
-      const mailbox = body.items?.[0];
-      if (mailbox) {
-        const domain = mailbox.split("@")[1];
-        if (domain) assertSessionCanAccessDomain(session, domain);
-      }
-      await editMailbox(body as Record<string, unknown>);
+      const body = request.body as {
+        email?: string;
+        name?: string;
+        quota?: string | number;
+        active?: boolean;
+        password?: string;
+      };
+      const email = body.email?.trim().toLowerCase();
+      if (!email) return reply.status(400).send({ error: "E-mail da caixa é obrigatório" });
+      const domain = email.split("@")[1];
+      if (domain) assertSessionCanAccessDomain(session, domain);
+      await editMailbox(buildMailboxEditPayload({ ...body, email }));
+      return { ok: true };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.delete("/api/domain/mailboxes", async (request, reply) => {
+    try {
+      const session = requireRoleSession(request, "domainadmin", "admin");
+      const body = request.body as { email?: string };
+      const email = body.email?.trim().toLowerCase();
+      if (!email) return reply.status(400).send({ error: "E-mail da caixa é obrigatório" });
+      const domain = email.split("@")[1];
+      if (domain) assertSessionCanAccessDomain(session, domain);
+      await deleteMailbox([email]);
       return { ok: true };
     } catch (err) {
       return handleRouteError(reply, err);
