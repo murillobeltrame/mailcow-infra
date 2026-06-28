@@ -4,19 +4,60 @@ import {
   addMailbox,
   assertSessionCanAccessDomain,
   editMailbox,
+  getContainerStatus,
   getHostStatus,
   getVersion,
+  getVmailStatus,
   listAliases,
   listDomains,
   listMailboxes,
 } from "../mailcow-api.js";
 import { handleRouteError, requireRoleSession } from "../http.js";
+import { buildAdminDashboard } from "../status-utils.js";
 
 export async function registerAdminRoutes(app: FastifyInstance) {
+  app.get("/api/admin/status/dashboard", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      const [host, vmail, version, containers] = await Promise.all([
+        getHostStatus(),
+        getVmailStatus(),
+        getVersion(),
+        getContainerStatus(),
+      ]);
+      return buildAdminDashboard(
+        host,
+        vmail,
+        version,
+        containers as Parameters<typeof buildAdminDashboard>[3],
+      );
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
   app.get("/api/admin/status/host", async (request, reply) => {
     try {
       requireRoleSession(request, "admin");
       return await getHostStatus();
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.get("/api/admin/status/vmail", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      return await getVmailStatus();
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.get("/api/admin/status/containers", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      return await getContainerStatus();
     } catch (err) {
       return handleRouteError(reply, err);
     }

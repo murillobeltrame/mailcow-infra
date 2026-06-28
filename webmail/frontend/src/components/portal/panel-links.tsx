@@ -1,13 +1,23 @@
 import { Calendar, Mail, Server, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/auth/auth-context";
 import { panelLinks } from "@/lib/panel-urls";
+import type { UserRole } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 const icons = {
   admin: Server,
   user: User,
   sogo: Calendar,
+  webmail: Mail,
 } as const;
+
+const linkRoles: Record<string, UserRole[]> = {
+  webmail: ["user"],
+  user: ["user"],
+  sogo: ["user"],
+  admin: ["admin"],
+};
 
 type PanelLinksProps = {
   className?: string;
@@ -15,6 +25,13 @@ type PanelLinksProps = {
 };
 
 export function PanelLinks({ className, compact }: PanelLinksProps) {
+  const { user } = useAuth();
+  const visible = panelLinks.filter((link) => {
+    const roles = linkRoles[link.id];
+    if (!roles || !user) return true;
+    return roles.includes(user.role);
+  });
+
   return (
     <div className={cn("space-y-3", className)}>
       {!compact && (
@@ -27,7 +44,7 @@ export function PanelLinks({ className, compact }: PanelLinksProps) {
       )}
 
       <div className={cn("grid gap-2", compact ? "grid-cols-1" : "sm:grid-cols-1")}>
-        {panelLinks.map((link) => {
+        {visible.map((link) => {
           const Icon = icons[link.id as keyof typeof icons] ?? Mail;
           const inner = (
             <>

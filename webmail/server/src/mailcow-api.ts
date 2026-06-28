@@ -68,6 +68,21 @@ export async function getVersion() {
   return mailcowRequest<Record<string, unknown>>("GET", "get/status/version");
 }
 
+export async function getVmailStatus() {
+  return mailcowRequest<Record<string, unknown>>("GET", "get/status/vmail");
+}
+
+export async function getContainerStatus() {
+  return mailcowRequest<Record<string, unknown>>("GET", "get/status/containers");
+}
+
+export async function getMailbox(email: string) {
+  return mailcowRequest<Record<string, unknown>>(
+    "GET",
+    `get/mailbox/${encodeURIComponent(email)}`,
+  );
+}
+
 export async function listDomains() {
   return mailcowRequest<unknown[]>("GET", "get/domain/all");
 }

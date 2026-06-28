@@ -46,6 +46,36 @@ export type Folder = {
   unseen?: number;
 };
 
+export type AdminDashboard = {
+  cpu: { cores: number; usagePercent: number };
+  memory: {
+    totalBytes: number;
+    usagePercent: number;
+    totalLabel: string;
+    usedLabel: string;
+  };
+  disk: { used: string; total: string; usedPercent: string; device?: string };
+  version: string;
+  uptime: string;
+  systemTime: string;
+  architecture: string;
+  containers: { name: string; state: string; image?: string }[];
+  containersRunning: number;
+  containersTotal: number;
+};
+
+export type MailboxProfile = {
+  username?: string;
+  name?: string;
+  domain?: string;
+  quota?: number;
+  quota_used?: number;
+  percent_in_use?: string;
+  messages?: number;
+  created?: string;
+  attributes?: Record<string, string | null>;
+};
+
 export type MessageSummary = {
   uid: number;
   subject: string;
@@ -130,7 +160,10 @@ export const api = {
     });
   },
   hostStatus() {
-    return request<Record<string, unknown>>("/api/admin/status/host");
+    return request<AdminDashboard>("/api/admin/status/dashboard");
+  },
+  accountProfile() {
+    return request<{ profile: MailboxProfile }>("/api/account/profile");
   },
   adminDomains() {
     return request<{ domains: unknown[] }>("/api/admin/domains");
@@ -211,6 +244,12 @@ export const api = {
     return request<{ ok: boolean }>("/api/account/app-passwords", {
       method: "POST",
       body: JSON.stringify({ app_name, app_passwd, app_passwd2: app_passwd }),
+    });
+  },
+  deleteAppPassword(id: string) {
+    return request<{ ok: boolean }>("/api/account/app-passwords", {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
     });
   },
   sieve() {

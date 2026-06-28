@@ -18,6 +18,6 @@ export function defaultRouteForRole(role: UserRole): string {
     case "domainadmin":
       return "/domain";
     default:
-      return "/";
+      return "/account";
   }
 }

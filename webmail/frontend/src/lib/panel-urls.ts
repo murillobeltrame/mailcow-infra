@@ -27,12 +27,12 @@ export type PanelLink = {
 
 export const panelLinks: PanelLink[] = [
   {
-    id: "admin",
-    title: "Administração",
-    description: "Caixas, domínios, filas, RAM, disco e configuração do servidor.",
-    href: panelUrls.admin,
+    id: "webmail",
+    title: "E-mail",
+    description: "Ler, enviar e organizar mensagens na caixa de entrada.",
+    href: panelUrls.webmail,
     internal: true,
-    badge: "Admin",
+    badge: "Webmail",
   },
   {
     id: "user",
@@ -40,7 +40,7 @@ export const panelLinks: PanelLink[] = [
     description: "Senha, app passwords, filtros Sieve e preferências.",
     href: panelUrls.account,
     internal: true,
-    badge: "Usuário",
+    badge: "Conta",
   },
   {
     id: "sogo",
@@ -48,5 +48,13 @@ export const panelLinks: PanelLink[] = [
     description: "Agenda e livro de endereços no portal Nive.",
     href: panelUrls.calendar,
     internal: true,
+  },
+  {
+    id: "admin",
+    title: "Administração global",
+    description: "RAM, disco, domínios, caixas e containers do servidor.",
+    href: panelUrls.admin,
+    internal: true,
+    badge: "Admin",
   },
 ];

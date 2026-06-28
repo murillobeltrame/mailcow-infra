@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, HardDrive, Plus, Server } from "lucide-react";
+import { Activity, Cpu, HardDrive, Plus, Server, Timer } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, type AdminDashboard } from "@/lib/api";
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string; icon: typeof Server }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: typeof Server;
+}) {
   return (
     <div className="rounded-2xl border border-border/70 bg-surface p-5 shadow-soft">
       <div className="flex items-center gap-3">
@@ -19,6 +29,7 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string; 
         <div>
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className="text-lg font-semibold tabular-nums">{value}</p>
+          {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
         </div>
       </div>
     </div>
@@ -35,8 +46,8 @@ export function AdminPage() {
   const [mbName, setMbName] = useState("");
   const [mbPassword, setMbPassword] = useState("");
 
-  const hostQuery = useQuery({
-    queryKey: ["admin", "host"],
+  const dashboardQuery = useQuery({
+    queryKey: ["admin", "dashboard"],
     queryFn: () => api.hostStatus(),
   });
 
@@ -79,7 +90,7 @@ export function AdminPage() {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro ao criar caixa"),
   });
 
-  const host = hostQuery.data as Record<string, unknown> | undefined;
+  const dash = dashboardQuery.data as AdminDashboard | undefined;
   const domains = domainsQuery.data ?? [];
 
   return (
@@ -87,34 +98,91 @@ export function AdminPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Administração global</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Equivalente ao painel <strong>/admin</strong> do Mailcow — domínios, caixas e status do servidor.
+          Equivalente ao painel <strong>/admin</strong> do Mailcow — RAM, disco, containers, domínios e caixas.
         </p>
       </div>
 
-      {hostQuery.isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+      {dashboardQuery.isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
+      ) : dash ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Memória RAM"
+              value={`${dash.memory.usedLabel} / ${dash.memory.totalLabel}`}
+              sub={`${dash.memory.usagePercent.toFixed(1)}% em uso`}
+              icon={Activity}
+            />
+            <StatCard
+              label="Disco (vmail)"
+              value={`${dash.disk.used} / ${dash.disk.total}`}
+              sub={dash.disk.usedPercent !== "—" ? `${dash.disk.usedPercent} usado` : undefined}
+              icon={HardDrive}
+            />
+            <StatCard
+              label="CPU"
+              value={`${dash.cpu.usagePercent.toFixed(1)}%`}
+              sub={`${dash.cpu.cores} núcleos`}
+              icon={Cpu}
+            />
+            <StatCard
+              label="Containers"
+              value={`${dash.containersRunning} / ${dash.containersTotal}`}
+              sub={`Mailcow ${dash.version}`}
+              icon={Server}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Timer className="h-4 w-4" />
+              Uptime: {dash.uptime}
+            </span>
+            <span>Horário do servidor: {dash.systemTime}</span>
+            <span>Arquitetura: {dash.architecture}</span>
+            {dash.disk.device && <span>Volume: {dash.disk.device}</span>}
+          </div>
+
+          <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
+            <h2 className="mb-4 text-lg font-medium">Containers Docker</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-muted-foreground">
+                    <th className="pb-2 pr-4 font-medium">Nome</th>
+                    <th className="pb-2 pr-4 font-medium">Estado</th>
+                    <th className="pb-2 font-medium">Imagem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dash.containers.map((c) => (
+                    <tr key={c.name} className="border-b border-border/40">
+                      <td className="py-2 pr-4 font-mono text-xs">{c.name}</td>
+                      <td className="py-2 pr-4">
+                        <span
+                          className={
+                            c.state === "running"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-amber-600 dark:text-amber-400"
+                          }
+                        >
+                          {c.state}
+                        </span>
+                      </td>
+                      <td className="py-2 font-mono text-xs text-muted-foreground">{c.image ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard
-            label="Memória"
-            value={
-              host?.mem_used && host?.mem_total ? `${host.mem_used} / ${host.mem_total}` : "—"
-            }
-            icon={Activity}
-          />
-          <StatCard
-            label="Disco"
-            value={
-              host?.disk_used && host?.disk_total ? `${host.disk_used} / ${host.disk_total}` : "—"
-            }
-            icon={HardDrive}
-          />
-          <StatCard label="Domínios" value={String(domains.length || "—")} icon={Server} />
-        </div>
+        <p className="text-sm text-destructive">Não foi possível carregar o status do servidor.</p>
       )}
 
       <section className="rounded-2xl border border-primary/30 bg-primary/5 p-6 shadow-soft">
@@ -145,7 +213,7 @@ export function AdminPage() {
       </section>
 
       <section className="rounded-2xl border border-border/70 bg-surface p-6 shadow-soft">
-        <h2 className="mb-4 text-lg font-medium">Domínios existentes</h2>
+        <h2 className="mb-4 text-lg font-medium">Domínios existentes ({domains.length})</h2>
         {domainsQuery.isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : (

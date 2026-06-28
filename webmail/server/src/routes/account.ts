@@ -4,12 +4,25 @@ import {
   assertSessionCanAccessMailbox,
   deleteAppPassword,
   editMailbox,
+  getMailbox,
   listAppPasswords,
 } from "../mailcow-api.js";
 import { handleRouteError, requireRoleSession } from "../http.js";
 import { getActiveSieveScript, listSieveScripts, putSieveScript } from "../sieve-service.js";
 
 export async function registerAccountRoutes(app: FastifyInstance) {
+  app.get("/api/account/profile", async (request, reply) => {
+    try {
+      const session = requireRoleSession(request, "user");
+      if (!session.email) return reply.status(400).send({ error: "E-mail obrigatório" });
+      assertSessionCanAccessMailbox(session, session.email);
+      const profile = await getMailbox(session.email);
+      return { profile };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
   app.get("/api/account/app-passwords", async (request, reply) => {
     try {
       const session = requireRoleSession(request, "user");
