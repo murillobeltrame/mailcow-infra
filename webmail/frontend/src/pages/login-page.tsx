@@ -58,7 +58,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const id = mode === "admin" && !loginId.trim() ? "admin" : loginId.trim();
-      await login(id, password);
+      await login(id, password, mode);
       toast.success("Bem-vindo!");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Não foi possível entrar");

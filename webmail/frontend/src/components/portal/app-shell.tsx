@@ -13,8 +13,9 @@ const nav: NavItem[] = [
   { to: "/account", label: "Minha conta", roles: ["user"] },
   { to: "/calendar", label: "Calendário", roles: ["user"] },
   { to: "/contacts", label: "Contactos", roles: ["user"] },
-  { to: "/domain", label: "Domínio", roles: ["domainadmin", "admin"] },
   { to: "/admin", label: "Administração", roles: ["admin"] },
+  { to: "/domain", label: "Domínios e caixas", roles: ["domainadmin"] },
+  { to: "/domain", label: "Caixas por domínio", roles: ["admin"] },
 ];
 
 export function AppShell() {
@@ -42,7 +43,7 @@ export function AppShell() {
         <nav className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
           {items.map((item) => (
             <NavLink
-              key={item.to}
+              key={`${item.to}-${item.label}`}
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>

@@ -1,10 +1,13 @@
 import { createContext, useContext } from "react";
 import type { User } from "@/lib/api";
+import type { UserRole } from "@/lib/roles";
+
+export type LoginMode = UserRole;
 
 export type AuthContextValue = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, loginAs: LoginMode) => Promise<void>;
   logout: () => Promise<void>;
   establishSession: (user: User) => void;
 };

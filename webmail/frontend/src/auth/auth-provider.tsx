@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "./auth-context";
+import { AuthContext, type LoginMode } from "./auth-context";
 import { api } from "@/lib/api";
 import type { User } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
@@ -22,8 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (loginId: string, password: string) => {
-      const u = await api.login(loginId, password);
+    async (loginId: string, password: string, loginAs: LoginMode) => {
+      const u = await api.login(loginId, password, loginAs);
       setUser(u);
       navigate(defaultRouteForRole(u.role), { replace: true });
     },

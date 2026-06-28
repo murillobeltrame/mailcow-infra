@@ -1,4 +1,4 @@
-import type { UserRole } from "./roles";
+import type { UserRole } from "@/lib/roles";
 
 export class ApiError extends Error {
   status: number;
@@ -67,10 +67,10 @@ export type MessageDetail = MessageSummary & {
 };
 
 export const api = {
-  login(login: string, password: string) {
+  login(login: string, password: string, loginAs: UserRole = "user") {
     return request<User>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ login, password }),
+      body: JSON.stringify({ login, password, loginAs }),
     });
   },
   fido2Session(subject: string, role?: UserRole) {
@@ -139,8 +139,64 @@ export const api = {
     const q = domain ? `?domain=${encodeURIComponent(domain)}` : "";
     return request<{ mailboxes: unknown[] }>(`/api/admin/mailboxes${q}`);
   },
+  adminCreateDomain(domain: string) {
+    return request<{ ok: boolean }>("/api/admin/domains", {
+      method: "POST",
+      body: JSON.stringify({
+        domain,
+        active: "1",
+        aliases: "400",
+        mailboxes: "50",
+        defquota: "3072",
+        maxquota: "10240",
+        quota: "102400",
+        relayhost: "",
+        backupmx: "0",
+        gal: "1",
+      }),
+    });
+  },
+  adminCreateMailbox(data: {
+    local_part: string;
+    domain: string;
+    name: string;
+    password: string;
+    quota?: string;
+  }) {
+    return request<{ ok: boolean }>("/api/admin/mailboxes", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        quota: data.quota ?? "3072",
+        active: "1",
+        force_pw_update: "0",
+        password2: data.password,
+      }),
+    });
+  },
+  domainDomains() {
+    return request<{ domains: { domain_name?: string; active?: string }[] }>("/api/domain/domains");
+  },
   domainMailboxes(domain: string) {
     return request<{ mailboxes: unknown[] }>(`/api/domain/mailboxes?domain=${encodeURIComponent(domain)}`);
+  },
+  domainCreateMailbox(data: {
+    local_part: string;
+    domain: string;
+    name: string;
+    password: string;
+    quota?: string;
+  }) {
+    return request<{ ok: boolean }>("/api/domain/mailboxes", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        quota: data.quota ?? "3072",
+        active: "1",
+        force_pw_update: "0",
+        password2: data.password,
+      }),
+    });
   },
   changePassword(password: string, password2?: string) {
     return request<{ ok: boolean }>("/api/account/password", {

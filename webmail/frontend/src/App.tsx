@@ -8,7 +8,8 @@ import { DomainPage } from "@/pages/domain-page";
 import { GuestRoute } from "@/components/auth/protected-route";
 import { LoginPage } from "@/pages/login-page";
 import { MailboxPage } from "@/pages/mailbox-page";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { RoleHomeRedirect } from "@/components/auth/role-home-redirect";
+import { Route, Routes } from "react-router-dom";
 
 export function AppRoutes() {
   return (
@@ -77,7 +78,7 @@ export function AppRoutes() {
           }
         />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<RoleHomeRedirect />} />
     </Routes>
   );
 }

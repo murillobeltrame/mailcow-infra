@@ -15,13 +15,23 @@ import { createSession, destroySession } from "../session.js";
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post("/api/auth/login", async (request, reply) => {
     try {
-      const body = request.body as { email?: string; login?: string; password?: string };
+      const body = request.body as {
+        email?: string;
+        login?: string;
+        password?: string;
+        loginAs?: "user" | "admin" | "domainadmin";
+        role?: "user" | "admin" | "domainadmin";
+      };
       const login = (body.login ?? body.email)?.trim();
       const password = body.password;
-      if (!login || !password) {
-        return reply.status(400).send({ error: "Usuário/e-mail e senha são obrigatórios" });
+      const loginAs = body.loginAs ?? body.role ?? "user";
+      if (!password) {
+        return reply.status(400).send({ error: "Senha é obrigatória" });
       }
-      const result = await authenticateLogin(login, password);
+      if (loginAs !== "admin" && !login) {
+        return reply.status(400).send({ error: "Usuário/e-mail é obrigatório" });
+      }
+      const result = await authenticateLogin(login ?? "admin", password, loginAs);
       const session = createSession(
         {
           role: result.role,
