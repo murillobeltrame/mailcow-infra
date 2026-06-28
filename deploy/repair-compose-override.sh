@@ -24,6 +24,9 @@ services:
       - NODE_ENV=production
       - PORT=8080
       - COOKIE_PATH=/mail/
+      - IMAP_TLS_SERVERNAME=mail.nivesistemas.com.br
+      - IMAP_TLS_REJECT_UNAUTHORIZED=false
+      - SMTP_TLS_SERVERNAME=mail.nivesistemas.com.br
       - IMAP_HOST=dovecot-mailcow
       - IMAP_PORT=993
       - SMTP_HOST=postfix-mailcow

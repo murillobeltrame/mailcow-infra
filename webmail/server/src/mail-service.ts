@@ -1,7 +1,7 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import nodemailer from "nodemailer";
-import { config } from "./config.js";
+import { config, mailTlsOptions } from "./config.js";
 import type { MailSession } from "./session.js";
 
 export type FolderInfo = {
@@ -31,29 +31,36 @@ export type MessageDetail = MessageSummary & {
   attachments: { filename: string; contentType: string; size: number }[];
 };
 
-function createImapClient(session: MailSession) {
-  return new ImapFlow({
-    host: config.imapHost,
-    port: config.imapPort,
-    secure: config.imapSecure,
-    auth: { user: session.email, pass: session.password },
-    logger: false,
-  });
-}
-
-export async function verifyCredentials(email: string, password: string) {
-  const client = new ImapFlow({
+function imapOptions(email: string, password: string) {
+  return {
     host: config.imapHost,
     port: config.imapPort,
     secure: config.imapSecure,
     auth: { user: email, pass: password },
-    logger: false,
-  });
+    logger: false as const,
+    tls: mailTlsOptions,
+  };
+}
+
+function createImapClient(session: MailSession) {
+  return new ImapFlow(imapOptions(session.email, session.password));
+}
+
+export async function verifyCredentials(email: string, password: string) {
+  const client = new ImapFlow(imapOptions(email, password));
   try {
     await client.connect();
     await client.logout();
     return true;
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const authFailed =
+      (err as { authenticationFailed?: boolean }).authenticationFailed ||
+      /auth/i.test(msg) ||
+      /invalid credentials/i.test(msg);
+    if (!authFailed) {
+      console.error("[imap] verifyCredentials:", msg);
+    }
     return false;
   }
 }
@@ -253,7 +260,7 @@ export async function sendMail(
     port: config.smtpPort,
     secure: config.smtpSecure,
     auth: { user: session.email, pass: session.password },
-    tls: { rejectUnauthorized: false },
+    tls: mailTlsOptions,
   });
 
   await transport.sendMail({
