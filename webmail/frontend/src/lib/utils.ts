@@ -5,6 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Garante array mesmo quando a API devolve objeto indexado. */
+export function asArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  const obj = value as Record<string, unknown>;
+  if (Array.isArray(obj.msg)) return obj.msg as T[];
+  const values = Object.values(obj).filter((v) => v && typeof v === "object");
+  return values as T[];
+}
+
 export function formatRelativeDate(iso: string) {
   const date = new Date(iso);
   const now = new Date();

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, api, type AdminDashboard } from "@/lib/api";
+import { asArray } from "@/lib/utils";
 
 function StatCard({
   label,
@@ -91,7 +92,10 @@ export function AdminPage() {
   });
 
   const dash = dashboardQuery.data as AdminDashboard | undefined;
-  const domains = domainsQuery.data ?? [];
+  const domains = asArray<DomainRow>(domainsQuery.data);
+  const mailboxes = asArray<{ username?: string; name?: string; quota_used?: string; quota?: string }>(
+    mailboxesQuery.data,
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6">
@@ -300,11 +304,7 @@ export function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(
-                    mailboxesQuery.data as
-                      | { username?: string; name?: string; quota_used?: string; quota?: string }[]
-                      | undefined
-                  )?.map((m) => (
+                  {mailboxes.map((m) => (
                     <tr key={m.username} className="border-b border-border/40">
                       <td className="py-2 pr-4">{m.username}</td>
                       <td className="py-2 pr-4">{m.name ?? "—"}</td>

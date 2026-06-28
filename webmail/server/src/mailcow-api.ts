@@ -61,6 +61,41 @@ export async function mailcowRequest<T = ApiResult>(
   return data;
 }
 
+/** Mailcow GET /all às vezes devolve objeto indexado ou { msg: [...] } em vez de array. */
+export function normalizeMailcowList<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (!data || typeof data !== "object") return [];
+
+  const obj = data as ApiResult & Record<string, unknown>;
+  if (obj.type === "error") {
+    const msg = typeof obj.msg === "string" ? obj.msg : "Erro API Mailcow";
+    throw new MailcowApiError(msg, 502, data);
+  }
+  if (Array.isArray(obj.msg)) return obj.msg as T[];
+
+  const values = Object.values(obj).filter((v) => v && typeof v === "object");
+  return values as T[];
+}
+
+export function normalizeContainers(
+  data: unknown,
+): Record<string, { container?: string; state?: string; image?: string }> {
+  if (Array.isArray(data)) {
+    const out: Record<string, { container?: string; state?: string; image?: string }> = {};
+    for (const item of data) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as { container?: string; state?: string; image?: string };
+      const key = row.container ?? String(out.length);
+      out[key] = row;
+    }
+    return out;
+  }
+  if (data && typeof data === "object") {
+    return data as Record<string, { container?: string; state?: string; image?: string }>;
+  }
+  return {};
+}
+
 export async function getHostStatus() {
   return mailcowRequest<Record<string, unknown>>("GET", "get/status/host");
 }
@@ -74,7 +109,8 @@ export async function getVmailStatus() {
 }
 
 export async function getContainerStatus() {
-  return mailcowRequest<Record<string, unknown>>("GET", "get/status/containers");
+  const data = await mailcowRequest<unknown>("GET", "get/status/containers");
+  return normalizeContainers(data);
 }
 
 export async function getMailbox(email: string) {
@@ -85,17 +121,20 @@ export async function getMailbox(email: string) {
 }
 
 export async function listDomains() {
-  return mailcowRequest<unknown[]>("GET", "get/domain/all");
+  const data = await mailcowRequest<unknown>("GET", "get/domain/all");
+  return normalizeMailcowList(data);
 }
 
 export async function listMailboxes(domain?: string) {
   const path = domain ? `get/mailbox/all/${encodeURIComponent(domain)}` : "get/mailbox/all";
-  return mailcowRequest<unknown[]>("GET", path);
+  const data = await mailcowRequest<unknown>("GET", path);
+  return normalizeMailcowList(data);
 }
 
 export async function listAliases(domain?: string) {
   const path = domain ? `get/alias/all/${encodeURIComponent(domain)}` : "get/alias/all";
-  return mailcowRequest<unknown[]>("GET", path);
+  const data = await mailcowRequest<unknown>("GET", path);
+  return normalizeMailcowList(data);
 }
 
 export async function editMailbox(attrs: Record<string, unknown>) {
@@ -111,7 +150,8 @@ export async function addDomain(attrs: Record<string, unknown>) {
 }
 
 export async function listAppPasswords(mailbox: string) {
-  return mailcowRequest<unknown[]>("GET", `get/app-passwd/all/${encodeURIComponent(mailbox)}`);
+  const data = await mailcowRequest<unknown>("GET", `get/app-passwd/all/${encodeURIComponent(mailbox)}`);
+  return normalizeMailcowList(data);
 }
 
 export async function addAppPassword(attrs: Record<string, unknown>) {

@@ -3,6 +3,7 @@ import { CalendarDays } from "lucide-react";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { asArray } from "@/lib/utils";
 
 export function CalendarPage() {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function CalendarPage() {
     enabled: !!selectedHref,
   });
 
-  const calendars = calendarsQuery.data ?? [];
+  const calendars = asArray<{ href: string; name: string }>(calendarsQuery.data);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -57,12 +58,12 @@ export function CalendarPage() {
               <Skeleton className="h-48 w-full" />
             ) : (
               <ul className="space-y-3">
-                {(eventsQuery.data ?? []).map((ev, i) => (
+                {asArray(eventsQuery.data).map((ev, i) => (
                   <li key={i} className="rounded-xl border border-border/60 px-4 py-3">
                     <p className="font-medium">{ev.summary || "(Sem título)"}</p>
                   </li>
                 ))}
-                {(eventsQuery.data ?? []).length === 0 && (
+                {asArray(eventsQuery.data).length === 0 && (
                   <p className="text-sm text-muted-foreground">Nenhum evento neste calendário</p>
                 )}
               </ul>

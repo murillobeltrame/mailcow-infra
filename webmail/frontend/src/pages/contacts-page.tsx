@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { asArray } from "@/lib/utils";
 
 export function ContactsPage() {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function ContactsPage() {
     enabled: !!selectedHref,
   });
 
-  const books = booksQuery.data ?? [];
+  const books = asArray<{ href: string; name: string }>(booksQuery.data);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -57,13 +58,13 @@ export function ContactsPage() {
               <Skeleton className="h-48 w-full" />
             ) : (
               <ul className="divide-y divide-border/60">
-                {(contactsQuery.data ?? []).map((c, i) => (
+                {asArray(contactsQuery.data).map((c, i) => (
                   <li key={i} className="flex items-center justify-between py-3">
                     <span className="font-medium">{c.fn || "—"}</span>
                     <span className="text-sm text-muted-foreground">{c.email ?? ""}</span>
                   </li>
                 ))}
-                {(contactsQuery.data ?? []).length === 0 && (
+                {asArray(contactsQuery.data).length === 0 && (
                   <p className="py-4 text-sm text-muted-foreground">Nenhum contacto</p>
                 )}
               </ul>

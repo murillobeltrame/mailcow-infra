@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api, type MailboxProfile } from "@/lib/api";
 import { panelUrls } from "@/lib/panel-urls";
+import { asArray } from "@/lib/utils";
 
 function formatQuota(profile: MailboxProfile): string {
   const used = profile.quota_used ?? 0;
@@ -183,24 +184,28 @@ export function AccountPage() {
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : (
           <ul className="mb-4 space-y-2 text-sm">
-            {(appPwQuery.data as { app_name?: string; id?: string }[] | undefined)?.map((item) => (
-              <li
-                key={item.id ?? item.app_name}
-                className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
-              >
-                <span>{item.app_name ?? item.id}</span>
-                {item.id && (
-                  <button
-                    type="button"
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Remover"
-                    onClick={() => removeAppPw.mutate(item.id!)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </li>
-            )) ?? <li className="text-muted-foreground">Nenhuma senha de app registrada</li>}
+            {asArray<{ app_name?: string; id?: string }>(appPwQuery.data).length === 0 ? (
+              <li className="text-muted-foreground">Nenhuma senha de app registrada</li>
+            ) : (
+              asArray<{ app_name?: string; id?: string }>(appPwQuery.data).map((item) => (
+                <li
+                  key={item.id ?? item.app_name}
+                  className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
+                >
+                  <span>{item.app_name ?? item.id}</span>
+                  {item.id && (
+                    <button
+                      type="button"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Remover"
+                      onClick={() => removeAppPw.mutate(item.id!)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </li>
+              ))
+            )}
           </ul>
         )}
         <div className="grid gap-4 sm:grid-cols-2">

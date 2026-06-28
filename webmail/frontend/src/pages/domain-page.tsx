@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, api } from "@/lib/api";
+import { asArray } from "@/lib/utils";
 
 export function DomainPage() {
   const { user } = useAuth();
@@ -23,7 +24,9 @@ export function DomainPage() {
     queryFn: () => api.domainDomains().then((r) => r.domains),
   });
 
-  const domainOptions = domainsQuery.data?.map((d) => d.domain_name).filter(Boolean) as string[] | undefined;
+  const domainOptions = asArray<{ domain_name?: string }>(domainsQuery.data)
+    .map((d) => d.domain_name)
+    .filter(Boolean) as string[];
 
   useEffect(() => {
     if (!domain && domainOptions?.length) {
@@ -54,6 +57,10 @@ export function DomainPage() {
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro ao criar caixa"),
   });
+
+  const mailboxes = asArray<{ username?: string; name?: string; active?: string }>(
+    mailboxesQuery.data?.mailboxes,
+  );
 
   const isDomainAdmin = user?.role === "domainadmin";
 
@@ -149,15 +156,13 @@ export function DomainPage() {
                 </tr>
               </thead>
               <tbody>
-                {(mailboxesQuery.data?.mailboxes as { username?: string; name?: string; active?: string }[] | undefined)?.map(
-                  (m) => (
-                    <tr key={m.username} className="border-b border-border/40">
-                      <td className="py-2 pr-4">{m.username}</td>
-                      <td className="py-2 pr-4">{m.name ?? "—"}</td>
-                      <td className="py-2">{m.active === "1" ? "Sim" : "Não"}</td>
-                    </tr>
-                  ),
-                )}
+                {mailboxes.map((m) => (
+                  <tr key={m.username} className="border-b border-border/40">
+                    <td className="py-2 pr-4">{m.username}</td>
+                    <td className="py-2 pr-4">{m.name ?? "—"}</td>
+                    <td className="py-2">{m.active === "1" ? "Sim" : "Não"}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
