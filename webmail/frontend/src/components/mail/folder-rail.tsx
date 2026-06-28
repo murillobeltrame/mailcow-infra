@@ -31,12 +31,12 @@ export function FolderRail({
   return (
     <nav
       className={cn(
-        "mail-surface flex w-16 shrink-0 flex-col items-center py-3 sm:w-[4.5rem]",
+        "mail-surface flex w-16 shrink-0 flex-col items-center px-1 pb-3 pt-5 sm:w-[4.5rem]",
         className,
       )}
       aria-label="Pastas"
     >
-      <BrandMark size="sm" className="mb-4 hidden md:block" />
+      <BrandMark size="sm" className="mb-4 hidden shrink-0 md:block" />
 
       <button
         type="button"
