@@ -284,10 +284,64 @@ async function getMessageInner(session: MailSession, folder: string, uid: number
   }
 }
 
+async function buildMimeMessage(
+  opts: nodemailer.SendMailOptions
+): Promise<Buffer> {
+  const builder = nodemailer.createTransport({
+    streamTransport: true,
+    newline: "unix",
+    buffer: true,
+  });
+  const info = await builder.sendMail(opts);
+  const raw = info.message;
+  if (Buffer.isBuffer(raw)) return raw;
+  return Buffer.from(String(raw));
+}
+
+async function resolveSentFolder(client: ImapFlow): Promise<string | null> {
+  const mailboxes = await client.list();
+  const sent = mailboxes.find((box) => box.specialUse === "\\Sent");
+  if (sent) return sent.path;
+
+  const fallbacks = ["Sent", "Sent Messages", "Sent Items", "INBOX.Sent"];
+  for (const name of fallbacks) {
+    const match = mailboxes.find((box) => box.path === name || box.path.endsWith(`/${name}`));
+    if (match) return match.path;
+  }
+  return null;
+}
+
+async function appendToSentFolder(session: MailSession, raw: Buffer) {
+  const client = createImapClient(session);
+  await client.connect();
+  try {
+    const sentPath = await resolveSentFolder(client);
+    if (!sentPath) {
+      console.warn("[sendMail] Pasta Enviados não encontrada — cópia IMAP ignorada");
+      return;
+    }
+    await client.append(sentPath, raw, ["\\Seen"], new Date());
+  } finally {
+    await client.logout();
+  }
+}
+
 export async function sendMail(
   session: MailSession,
   opts: { to: string; subject: string; body: string; cc?: string; replyTo?: string }
 ) {
+  const mailOptions: nodemailer.SendMailOptions = {
+    from: session.name ? `"${session.name}" <${session.email}>` : session.email,
+    to: opts.to,
+    cc: opts.cc,
+    replyTo: opts.replyTo,
+    subject: opts.subject,
+    text: opts.body,
+    html: opts.body.replace(/\n/g, "<br>"),
+  };
+
+  const raw = await buildMimeMessage(mailOptions);
+
   const transport = nodemailer.createTransport({
     host: config.smtpHost,
     port: config.smtpPort,
@@ -296,15 +350,13 @@ export async function sendMail(
     tls: mailTlsOptions,
   });
 
-  await transport.sendMail({
-    from: session.name ? `"${session.name}" <${session.email}>` : session.email,
-    to: opts.to,
-    cc: opts.cc,
-    replyTo: opts.replyTo,
-    subject: opts.subject,
-    text: opts.body,
-    html: opts.body.replace(/\n/g, "<br>"),
-  });
+  await transport.sendMail(mailOptions);
+
+  try {
+    await appendToSentFolder(session, raw);
+  } catch (err) {
+    console.error("[sendMail] Falha ao gravar em Enviados:", err instanceof Error ? err.message : err);
+  }
 }
 
 export async function deleteMessages(session: MailSession, folder: string, uids: number[]) {

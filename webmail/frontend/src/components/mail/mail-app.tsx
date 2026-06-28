@@ -1,5 +1,7 @@
 import { Menu, PenLine } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
 import { ComposeSheet } from "@/components/mail/compose-sheet";
 import { FolderRail } from "@/components/mail/folder-rail";
@@ -10,11 +12,13 @@ import { useMailbox } from "@/hooks/use-mailbox";
 import { cn } from "@/lib/utils";
 
 export function MailApp() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const mailbox = useMailbox();
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyMode, setReplyMode] = useState(false);
   const [foldersOpen, setFoldersOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const composeDefaults = useMemo(() => {
     if (!replyMode || !mailbox.message) return undefined;
@@ -34,6 +38,20 @@ export function MailApp() {
   };
 
   const closeCompose = () => setComposeOpen(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      toast.success("Sessão encerrada");
+      navigate("/login", { replace: true });
+    } catch {
+      toast.error("Não foi possível sair");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   const selectFolder = (path: string) => {
     mailbox.selectFolder(path);
@@ -73,7 +91,8 @@ export function MailApp() {
           loading={mailbox.foldersLoading}
           onSelectFolder={mailbox.selectFolder}
           onCompose={openCompose}
-          onLogout={logout}
+          onLogout={handleLogout}
+          loggingOut={loggingOut}
         />
 
         {/* Drawer mobile — pastas */}
@@ -95,7 +114,8 @@ export function MailApp() {
                   openCompose();
                   setFoldersOpen(false);
                 }}
-                onLogout={logout}
+                onLogout={handleLogout}
+                loggingOut={loggingOut}
                 className="h-full rounded-none rounded-r-2xl"
               />
             </div>
@@ -115,6 +135,7 @@ export function MailApp() {
               onSearchSubmit={mailbox.submitSearch}
               onSelect={mailbox.setSelectedUid}
               onRefresh={mailbox.refresh}
+              refreshing={mailbox.refreshing}
             />
             <ReadingPanel
               message={mailbox.message}
@@ -150,7 +171,7 @@ export function MailApp() {
         open={composeOpen}
         onClose={closeCompose}
         defaults={composeDefaults}
-        onSent={mailbox.refresh}
+        onSent={mailbox.refreshAll}
       />
     </div>
   );

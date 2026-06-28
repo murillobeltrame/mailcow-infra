@@ -20,6 +20,16 @@ const app = Fastify({ logger: true });
 const SESSION_COOKIE = "nive_mail_session";
 const COOKIE_PATH = process.env.COOKIE_PATH ?? "/mail/";
 
+function sessionCookieOptions(maxAge?: number) {
+  const opts = {
+    path: COOKIE_PATH,
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+  };
+  return maxAge !== undefined ? { ...opts, maxAge } : opts;
+}
+
 await app.register(cors, {
   origin: true,
   credentials: true,
@@ -56,18 +66,14 @@ app.post("/api/auth/login", async (request, reply) => {
   }
   const session = createSession(email, password, email.split("@")[0], config.sessionTtlMs);
   reply.setCookie(SESSION_COOKIE, session.id, {
-    path: COOKIE_PATH,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: config.sessionTtlMs / 1000,
+    ...sessionCookieOptions(config.sessionTtlMs / 1000),
   });
   return { email: session.email, name: session.name };
 });
 
 app.post("/api/auth/logout", async (request, reply) => {
   destroySession(request.cookies[SESSION_COOKIE]);
-  reply.clearCookie(SESSION_COOKIE, { path: COOKIE_PATH });
+  reply.clearCookie(SESSION_COOKIE, sessionCookieOptions());
   return { ok: true };
 });
 

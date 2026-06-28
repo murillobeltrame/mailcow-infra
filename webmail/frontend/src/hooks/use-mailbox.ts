@@ -10,6 +10,7 @@ export function useMailbox() {
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const foldersQuery = useQuery({
     queryKey: mailKeys.folders,
@@ -44,13 +45,33 @@ export function useMailbox() {
     setSelectedUid(null);
   }, [searchInput]);
 
-  const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: mailKeys.folders });
-    queryClient.invalidateQueries({ queryKey: mailKeys.messages(activeFolder, searchQuery) });
-    if (selectedUid !== null) {
-      queryClient.invalidateQueries({ queryKey: mailKeys.message(activeFolder, selectedUid) });
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const tasks = [
+        queryClient.refetchQueries({ queryKey: mailKeys.folders }),
+        queryClient.refetchQueries({ queryKey: mailKeys.messages(activeFolder, searchQuery) }),
+      ];
+      if (selectedUid !== null) {
+        tasks.push(queryClient.refetchQueries({ queryKey: mailKeys.message(activeFolder, selectedUid) }));
+      }
+      await Promise.all(tasks);
+    } finally {
+      setRefreshing(false);
     }
   }, [queryClient, activeFolder, searchQuery, selectedUid]);
+
+  const refreshAll = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: mailKeys.folders }),
+        queryClient.refetchQueries({ queryKey: mailKeys.all }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
 
   const deleteMutation = useMutation({
     mutationFn: (uid: number) => api.deleteMessages(activeFolder, [uid]),
@@ -82,6 +103,8 @@ export function useMailbox() {
     setSelectedUid,
     submitSearch,
     refresh,
+    refreshAll,
+    refreshing,
     deleteMessage: deleteMutation.mutate,
     isDeleting: deleteMutation.isPending,
     foldersError: foldersQuery.error,

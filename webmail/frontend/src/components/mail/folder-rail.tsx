@@ -13,6 +13,7 @@ type FolderRailProps = {
   onSelectFolder: (path: string) => void;
   onCompose: () => void;
   onLogout: () => void;
+  loggingOut?: boolean;
   className?: string;
 };
 
@@ -23,6 +24,7 @@ export function FolderRail({
   onSelectFolder,
   onCompose,
   onLogout,
+  loggingOut = false,
   className,
 }: FolderRailProps) {
   return (
@@ -90,10 +92,14 @@ export function FolderRail({
         <button
           type="button"
           onClick={onLogout}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          disabled={loggingOut}
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground",
+            loggingOut && "pointer-events-none opacity-50"
+          )}
           aria-label="Sair"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className={cn("h-4 w-4", loggingOut && "animate-pulse")} />
         </button>
       </div>
     </nav>

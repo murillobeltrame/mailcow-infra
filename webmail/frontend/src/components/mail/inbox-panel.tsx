@@ -3,12 +3,14 @@ import { MessageCard } from "@/components/mail/message-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MessageSummary } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type InboxPanelProps = {
   folderName: string;
   messages: MessageSummary[];
   selectedUid: number | null;
   loading: boolean;
+  refreshing?: boolean;
   searchInput: string;
   onSearchChange: (v: string) => void;
   onSearchSubmit: () => void;
@@ -21,6 +23,7 @@ export function InboxPanel({
   messages,
   selectedUid,
   loading,
+  refreshing = false,
   searchInput,
   onSearchChange,
   onSearchSubmit,
@@ -34,11 +37,18 @@ export function InboxPanel({
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{folderName}</h1>
             <p className="text-xs text-muted-foreground">
-              {loading ? "Carregando…" : `${messages.length} mensagen${messages.length === 1 ? "" : "s"}`}
+              {loading ? "Carregando…" : refreshing ? "Atualizando…" : `${messages.length} mensagen${messages.length === 1 ? "" : "s"}`}
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-xl" onClick={onRefresh} aria-label="Atualizar">
-            <RefreshCw className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-xl"
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label="Atualizar"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
           </Button>
         </div>
 
