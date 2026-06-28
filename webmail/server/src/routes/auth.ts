@@ -42,7 +42,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         },
         config.sessionTtlMs,
       );
-      setSessionCookie(reply, session.id);
+      setSessionCookie(reply, session);
       return publicUser(session);
     } catch (err) {
       return handleRouteError(reply, err);
@@ -60,7 +60,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         name: body.subject.split("@")[0],
         password: "",
       }, config.sessionTtlMs);
-      setSessionCookie(reply, session.id);
+      setSessionCookie(reply, session);
       return publicUser(session);
     } catch (err) {
       return handleRouteError(reply, err);
@@ -88,8 +88,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.get("/api/auth/me", async (request, reply) => {
     const session = getRequestSession(request);
     reply.header("Cache-Control", "no-store");
-    if (!session) return reply.status(401).send({ error: "Não autenticado" });
-    return publicUser(session);
+    return { user: session ? publicUser(session) : null };
   });
 
   app.get("/api/auth/check", async (request) => {

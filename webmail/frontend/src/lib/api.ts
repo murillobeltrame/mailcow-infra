@@ -113,7 +113,7 @@ export const api = {
     return request<{ ok: boolean }>("/api/auth/logout", { method: "POST", cache: "no-store" });
   },
   me() {
-    return request<User>("/api/auth/me", { cache: "no-store" });
+    return request<{ user: User | null }>("/api/auth/me", { cache: "no-store" }).then((r) => r.user);
   },
   folders() {
     return request<{ folders: Folder[] }>("/api/folders");

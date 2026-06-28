@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "./config.js";
-import { destroySession, getSession, touchSession, type PortalSession, type UserRole } from "./session.js";
+import { parseSessionToken, sessionToToken, touchSession, type PortalSession, type UserRole } from "./session.js";
 
 export const SESSION_COOKIE = "nive_mail_session";
 export const COOKIE_PATH = process.env.COOKIE_PATH ?? "/mail/";
@@ -34,7 +34,7 @@ export function getSessionCookieValue(request: FastifyRequest): string | undefin
 }
 
 export function getRequestSession(request: FastifyRequest): PortalSession | null {
-  return getSession(getSessionCookieValue(request));
+  return parseSessionToken(getSessionCookieValue(request));
 }
 
 export function requireSession(request: FastifyRequest): PortalSession {
@@ -44,8 +44,7 @@ export function requireSession(request: FastifyRequest): PortalSession {
     err.statusCode = 401;
     throw err;
   }
-  touchSession(session.id, config.sessionTtlMs);
-  return session;
+  return touchSession(session, config.sessionTtlMs);
 }
 
 export function requireRoleSession(request: FastifyRequest, ...roles: UserRole[]): PortalSession {
@@ -58,9 +57,10 @@ export function requireRoleSession(request: FastifyRequest, ...roles: UserRole[]
   return session;
 }
 
-export function setSessionCookie(reply: FastifyReply, sessionId: string) {
-  reply.setCookie(SESSION_COOKIE, sessionId, {
-    ...sessionCookieOptions(config.sessionTtlMs / 1000),
+export function setSessionCookie(reply: FastifyReply, session: PortalSession) {
+  const maxAge = Math.max(1, Math.floor((session.expiresAt - Date.now()) / 1000));
+  reply.setCookie(SESSION_COOKIE, sessionToToken(session), {
+    ...sessionCookieOptions(maxAge),
   });
 }
 
@@ -92,14 +92,7 @@ export function publicUser(session: PortalSession) {
 }
 
 /** Invalida sessão server-side e remove cookies do browser. */
-export function terminateSession(request: FastifyRequest, reply: FastifyReply) {
-  const cookieId = getSessionCookieValue(request);
-  const session = getRequestSession(request);
-  if (session) {
-    destroySession(session.id);
-  } else if (cookieId) {
-    destroySession(cookieId);
-  }
+export function terminateSession(_request: FastifyRequest, reply: FastifyReply) {
   clearSessionCookie(reply);
   reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
   reply.header("Pragma", "no-cache");
