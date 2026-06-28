@@ -60,7 +60,9 @@ done
 
 if [[ "${api_ready}" != true ]]; then
   echo "AVISO: API Mailcow ainda nao respondeu (nginx/php reiniciando?)" >&2
-  [[ "${STRICT}" = "1" ]] && exit 1
+  if [[ "${STRICT}" = "1" ]]; then
+    exit 1
+  fi
 fi
 
 if docker ps --format '{{.Names}}' | grep -q '^nive-mail-web$'; then
@@ -80,6 +82,8 @@ console.log('BFF API OK:', d.length, 'dominios');
   done
   if [[ "${bff_ok}" != true ]]; then
     echo "AVISO: portal ainda nao consegue listDomains (servicos reiniciando?)" >&2
-    [[ "${STRICT}" = "1" ]] && exit 1
+    if [[ "${STRICT}" = "1" ]]; then
+      exit 1
+    fi
   fi
 fi
