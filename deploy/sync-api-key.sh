@@ -17,7 +17,7 @@ set_conf() {
   fi
 }
 
-set_conf API_ALLOW_FROM "127.0.0.1,172.22.1.1,172.23.1.1"
+set_conf API_ALLOW_FROM "127.0.0.1,172.22.1.1,172.23.1.0/24"
 
 KEY=$(grep '^API_KEY=' mailcow.conf | cut -d= -f2- | tr -d '\r')
 DBPASS=$(grep '^DBPASS=' mailcow.conf | cut -d= -f2- | tr -d '\r')
@@ -27,9 +27,11 @@ if [[ -z "${KEY}" ]]; then
   exit 1
 fi
 
+ALLOW="127.0.0.1,172.22.1.1,172.23.1.0/24"
 docker compose exec -T mysql-mailcow mysql -u mailcow -p"${DBPASS}" mailcow -e "
 DELETE FROM api;
-INSERT INTO api (api_key, active, allow_from, access) VALUES ('${KEY}', 1, '127.0.0.1,172.22.1.1,172.23.1.1', 'rw');
+INSERT INTO api (api_key, active, allow_from, access, skip_ip_check)
+VALUES ('${KEY}', 1, '${ALLOW}', 'rw', 1);
 " 2>/dev/null
 
 HOST="${MAILCOW_HOSTNAME:?}"

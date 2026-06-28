@@ -26,6 +26,9 @@ docker build -t nive-mail-web:latest "${WEBMAIL_DIR}"
 echo "==> Configurando docker-compose.override.yml..."
 bash "${SCRIPT_DIR}/repair-compose-override.sh"
 
+echo "==> Sincronizando API key (allow_from rede Docker)..."
+bash "${SCRIPT_DIR}/sync-api-key.sh"
+
 echo "==> Cutover rotas Mailcow → portal..."
 bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"
 
