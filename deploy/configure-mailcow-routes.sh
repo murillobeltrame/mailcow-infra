@@ -93,19 +93,14 @@ location ^~ /user/ {
 location = /admin {
     return 302 /mail/admin;
 }
-# GET → portal React; POST continua no PHP (login legado / FIDO2)
 location ^~ /admin/ {
-    limit_except POST {
-        return 302 /mail/admin;
-    }
+    return 302 /mail/admin;
 }
 location = /domainadmin {
     return 302 /mail/domain;
 }
 location ^~ /domainadmin/ {
-    limit_except POST {
-        return 302 /mail/domain;
-    }
+    return 302 /mail/domain;
 }
 # SOGo Mail legado → webmail React; calendário/contactos permanecem em /SOGo/
 location ~ ^/SOGo/so/[^/]+/Mail(/|$) {
