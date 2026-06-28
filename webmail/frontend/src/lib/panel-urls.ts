@@ -2,6 +2,7 @@
 export const panelUrls = {
   /** Login Mailcow — detecta admin, domainadmin ou usuário */
   login: "/",
+  resetPassword: "/reset-password",
   admin: "/admin",
   user: "/user",
   domainAdmin: "/domainadmin",
