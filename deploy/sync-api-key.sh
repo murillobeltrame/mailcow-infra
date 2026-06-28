@@ -39,3 +39,15 @@ VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
   -H "Host: ${HOST}" \
   -H "X-API-Key: ${KEY}")
 echo "API OK: ${VER}"
+
+if docker ps --format '{{.Names}}' | grep -q '^nive-mail-web$'; then
+  docker exec nive-mail-web node --input-type=module -e "
+import { listDomains } from '/app/dist/mailcow-api.js';
+const d = await listDomains();
+if (!Array.isArray(d) || d.length < 1) throw new Error('listDomains vazio');
+console.log('BFF API OK:', d.length, 'dominios');
+" || {
+    echo "ERRO: portal nao consegue chamar API Mailcow (allow_from/skip_ip_check)" >&2
+    exit 1
+  }
+fi

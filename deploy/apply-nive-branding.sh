@@ -145,6 +145,8 @@ if docker ps --format '{{.Names}}' | grep -qE 'sogo-mailcow'; then
 fi
 
 echo "==> Branding Nive aplicado com sucesso."
+echo "==> Sincronizando API key do portal..."
+bash "${SCRIPT_DIR}/sync-api-key.sh"
 echo "    Admin: https://${MAILCOW_HOSTNAME:-mail.nivesistemas.com.br}/admin"
 echo "    Webmail: https://${MAILCOW_HOSTNAME:-mail.nivesistemas.com.br}/SOGo"
 echo "    Idioma: pt-br (painel) + BrazilianPortuguese (SOGo)"

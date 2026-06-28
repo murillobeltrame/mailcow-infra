@@ -119,6 +119,9 @@ jobs:
             echo "==> Deploy branding (branding/ ou deploy/ alterado)"
             node deploy.mjs branding
           fi
+
+          echo "==> Pos-deploy: sincronizar API Mailcow"
+          bash sync-api-key.sh
         env:
           DEPLOY_MODE: local_vps
           DEPLOY_DKIM_WAIT_SEC: ${{ vars.DEPLOY_DKIM_WAIT_SEC || '120' }}
