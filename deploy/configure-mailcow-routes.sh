@@ -118,8 +118,14 @@ NGINX
 echo "==> Limpando cache Twig..."
 rm -rf data/web/templates/cache/* 2>/dev/null || true
 
-docker compose restart php-fpm-mailcow nginx-mailcow 2>/dev/null || \
-  docker-compose restart php-fpm-mailcow nginx-mailcow 2>/dev/null || true
+echo "==> Recarregando nginx (rotas portal)..."
+if docker compose exec nginx-mailcow nginx -t 2>/dev/null; then
+  docker compose exec nginx-mailcow nginx -s reload 2>/dev/null || \
+    docker compose restart nginx-mailcow 2>/dev/null || true
+else
+  docker compose restart nginx-mailcow 2>/dev/null || \
+    docker-compose restart nginx-mailcow 2>/dev/null || true
+fi
 
 echo ""
 echo "Rotas configuradas (portal unificado):"

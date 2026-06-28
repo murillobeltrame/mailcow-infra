@@ -5,26 +5,27 @@ MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
 OVERRIDE="${MAILCOW_DIR}/docker-compose.override.yml"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Carrega credenciais do mailcow.conf se disponível
-MAILCOW_API_KEY="${MAILCOW_API_KEY:-}"
-MAILCOW_DB_USER="${MAILCOW_DB_USER:-}"
-MAILCOW_DB_PASS="${MAILCOW_DB_PASS:-}"
-MAILCOW_DB_NAME="${MAILCOW_DB_NAME:-}"
-MAILCOW_HOSTNAME="${MAILCOW_HOSTNAME:-mail.nivesistemas.com.br}"
-if [[ -f "${MAILCOW_DIR}/mailcow.conf" ]]; then
-  if [[ -z "${MAILCOW_API_KEY}" ]]; then
-    MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
-  fi
-  MAILCOW_HOSTNAME="$(grep '^MAILCOW_HOSTNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r"')"
-  if [[ -z "${MAILCOW_DB_USER}" ]]; then
-    MAILCOW_DB_USER="$(grep '^DBUSER=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
-  fi
-  if [[ -z "${MAILCOW_DB_PASS}" ]]; then
-    MAILCOW_DB_PASS="$(grep '^DBPASS=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
-  fi
-  if [[ -z "${MAILCOW_DB_NAME}" ]]; then
-    MAILCOW_DB_NAME="$(grep '^DBNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
-  fi
+# Credenciais do portal: sempre mailcow.conf (fonte de verdade no VPS).
+MAILCOW_API_KEY=""
+MAILCOW_DB_USER=""
+MAILCOW_DB_PASS=""
+MAILCOW_DB_NAME=""
+MAILCOW_HOSTNAME="mail.nivesistemas.com.br"
+
+if [[ ! -f "${MAILCOW_DIR}/mailcow.conf" ]]; then
+  echo "mailcow.conf nao encontrado em ${MAILCOW_DIR}" >&2
+  exit 1
+fi
+
+MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+MAILCOW_HOSTNAME="$(grep '^MAILCOW_HOSTNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r"')"
+MAILCOW_DB_USER="$(grep '^DBUSER=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+MAILCOW_DB_PASS="$(grep '^DBPASS=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+MAILCOW_DB_NAME="$(grep '^DBNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+
+if [[ -z "${MAILCOW_API_KEY}" ]]; then
+  echo "API_KEY ausente em mailcow.conf" >&2
+  exit 1
 fi
 
 cat > "${OVERRIDE}" <<EOF
@@ -56,10 +57,10 @@ services:
       - SMTP_PORT=587
       - SIEVE_HOST=dovecot-mailcow
       - SIEVE_PORT=4190
-      - MAILCOW_API_URL=https://nginx-mailcow
+      - MAILCOW_API_URL=http://nginx-mailcow
       - MAILCOW_API_KEY=${MAILCOW_API_KEY}
       - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
-      - MAILCOW_API_TLS_INSECURE=true
+      - MAILCOW_API_TLS_INSECURE=false
       - MAILCOW_DB_HOST=mysql-mailcow
       - MAILCOW_DB_USER=${MAILCOW_DB_USER}
       - MAILCOW_DB_PASS=${MAILCOW_DB_PASS}
@@ -74,8 +75,9 @@ cd "${MAILCOW_DIR}"
 docker compose config >/dev/null
 echo "YAML válido."
 
-docker compose up -d nive-mail-web sogo-mailcow
-docker compose restart nginx-mailcow
+docker compose up -d --force-recreate nive-mail-web sogo-mailcow
+docker compose exec nginx-mailcow nginx -t
+docker compose exec nginx-mailcow nginx -s reload 2>/dev/null || docker compose restart nginx-mailcow
 
 sleep 2
 curl -sk -o /dev/null -w "/mail/ -> HTTP %{http_code}\n" -H "Host: mail.nivesistemas.com.br" https://127.0.0.1/mail/

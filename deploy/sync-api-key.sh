@@ -33,11 +33,14 @@ if [[ -z "${KEY}" ]]; then
 fi
 
 ALLOW="127.0.0.1,172.22.1.1,172.23.1.0/24"
-docker compose exec -T mysql-mailcow mysql -u mailcow -p"${DBPASS}" mailcow -e "
+if ! docker compose exec -T mysql-mailcow mysql -u mailcow -p"${DBPASS}" mailcow -e "
 DELETE FROM api;
 INSERT INTO api (api_key, active, allow_from, access, skip_ip_check)
 VALUES ('${KEY}', 1, '${ALLOW}', 'rw', 1);
-" 2>/dev/null
+"; then
+  echo "ERRO: falha ao atualizar tabela api no MySQL" >&2
+  exit 1
+fi
 
 HOST="${MAILCOW_HOSTNAME:?}"
 STRICT="${SYNC_API_STRICT:-0}"
@@ -45,47 +48,55 @@ VERIFY_BFF="${SYNC_API_VERIFY_BFF:-${STRICT}}"
 TRIES="${SYNC_API_RETRIES:-12}"
 SLEEP="${SYNC_API_SLEEP:-5}"
 
-if [[ "${VERIFY_BFF}" = "1" || "${STRICT}" = "1" ]]; then
-  api_ready=false
-  for ((i=1; i<=TRIES; i++)); do
-    VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
-      -H "Host: ${HOST}" \
-      -H "X-API-Key: ${KEY}" 2>/dev/null || true)
-    if echo "${VER}" | grep -q '"version"'; then
-      echo "API OK: ${VER}"
-      api_ready=true
-      break
-    fi
-    echo "Aguardando API Mailcow (${i}/${TRIES})..."
-    sleep "${SLEEP}"
-  done
-
-  if [[ "${api_ready}" != true ]]; then
-    echo "AVISO: API Mailcow ainda nao respondeu (nginx/php reiniciando?)" >&2
-    if [[ "${STRICT}" = "1" ]]; then
-      exit 1
-    fi
-  fi
-else
+api_ready=false
+for ((i=1; i<=TRIES; i++)); do
   VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
     -H "Host: ${HOST}" \
     -H "X-API-Key: ${KEY}" 2>/dev/null || true)
   if echo "${VER}" | grep -q '"version"'; then
     echo "API OK: ${VER}"
+    api_ready=true
+    break
+  fi
+  if [[ "${VERIFY_BFF}" = "1" || "${STRICT}" = "1" ]]; then
+    echo "Aguardando API Mailcow (${i}/${TRIES})..."
+    sleep "${SLEEP}"
+  fi
+done
+
+if [[ "${api_ready}" != true ]]; then
+  if [[ "${VERIFY_BFF}" = "1" || "${STRICT}" = "1" ]]; then
+    echo "AVISO: API Mailcow ainda nao respondeu (nginx/php reiniciando?)" >&2
+    if [[ "${STRICT}" = "1" ]]; then
+      exit 1
+    fi
   else
     echo "API key sincronizada (verificacao completa no pos-deploy)"
   fi
 fi
 
 if [[ "${VERIFY_BFF}" = "1" ]] && docker ps --format '{{.Names}}' | grep -q '^nive-mail-web$'; then
+  container_key=$(docker exec nive-mail-web printenv MAILCOW_API_KEY 2>/dev/null || true)
+  if [[ "${container_key}" != "${KEY}" ]]; then
+    echo "==> Recriando nive-mail-web (API key do container difere do mailcow.conf)..."
+    docker compose up -d --force-recreate nive-mail-web
+    sleep 8
+  fi
+
   bff_ok=false
   for ((i=1; i<=TRIES; i++)); do
     if docker exec nive-mail-web node --input-type=module -e "
-import { listDomains } from '/app/dist/mailcow-api.js';
-const d = await listDomains();
-if (!Array.isArray(d) || d.length < 1) throw new Error('listDomains vazio');
-console.log('BFF API OK:', d.length, 'dominios');
-" 2>/dev/null; then
+import { getVersion, listDomains } from '/app/dist/mailcow-api.js';
+try {
+  await getVersion();
+  const d = await listDomains();
+  if (!Array.isArray(d) || d.length < 1) throw new Error('listDomains vazio');
+  console.log('BFF API OK:', d.length, 'dominios');
+} catch (e) {
+  console.error('BFF ERRO:', e.message);
+  process.exit(1);
+}
+"; then
       bff_ok=true
       break
     fi
@@ -93,7 +104,7 @@ console.log('BFF API OK:', d.length, 'dominios');
     sleep "${SLEEP}"
   done
   if [[ "${bff_ok}" != true ]]; then
-    echo "AVISO: portal ainda nao consegue listDomains (servicos reiniciando?)" >&2
+    echo "AVISO: portal ainda nao consegue listDomains" >&2
     if [[ "${STRICT}" = "1" ]]; then
       exit 1
     fi
