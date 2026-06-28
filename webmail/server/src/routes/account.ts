@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import {
+  buildClientMailSettings,
+  formatClientMailSettingsText,
+} from "../client-mail-config.js";
+import {
   addAppPassword,
   assertSessionCanAccessMailbox,
   deleteAppPassword,
@@ -11,6 +15,20 @@ import { handleRouteError, refreshSessionCookie, requireRoleSession } from "../h
 import { getActiveSieveScript, listSieveScripts, putSieveScript } from "../sieve-service.js";
 
 export async function registerAccountRoutes(app: FastifyInstance) {
+  app.get("/api/account/client-config", async (request, reply) => {
+    try {
+      const session = requireRoleSession(request, "user");
+      if (!session.email) return reply.status(400).send({ error: "E-mail obrigatório" });
+      const settings = buildClientMailSettings(session.email);
+      return {
+        settings,
+        summary: formatClientMailSettingsText(settings),
+      };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
   app.get("/api/account/profile", async (request, reply) => {
     try {
       const session = requireRoleSession(request, "user");

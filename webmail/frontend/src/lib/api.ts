@@ -113,6 +113,33 @@ export type QuarantineRow = {
   created?: number;
 };
 
+export type ClientMailSettings = {
+  email: string;
+  hostname: string;
+  incoming: {
+    label: string;
+    server: string;
+    port: number;
+    security: string;
+    username: string;
+  };
+  outgoing: {
+    label: string;
+    server: string;
+    port: number;
+    security: string;
+    username: string;
+    authentication: string;
+  };
+  outgoingAlternate: {
+    label: string;
+    server: string;
+    port: number;
+    security: string;
+    username: string;
+  };
+};
+
 export type MailboxProfile = {
   username?: string;
   name?: string;
@@ -220,6 +247,9 @@ export const api = {
   },
   accountProfile() {
     return request<{ profile: MailboxProfile }>("/api/account/profile");
+  },
+  clientMailConfig() {
+    return request<{ settings: ClientMailSettings; summary: string }>("/api/account/client-config");
   },
   adminDomains() {
     return request<{ domains: unknown[] }>("/api/admin/domains");

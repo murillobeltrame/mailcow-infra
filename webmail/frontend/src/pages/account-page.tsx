@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HardDrive, KeyRound, Loader2, Mail, Shield, Trash2 } from "lucide-react";
+import { HardDrive, KeyRound, Loader2, Mail, Settings2, Shield, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -227,13 +227,22 @@ export function AccountPage() {
             <p className="text-lg font-semibold">{user?.email ?? profile?.username}</p>
             {profile?.name && <p className="text-sm text-muted-foreground">{profile.name}</p>}
           </div>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-          >
-            <Mail className="h-4 w-4" />
-            Abrir webmail
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              <Mail className="h-4 w-4" />
+              Abrir webmail
+            </Link>
+            <Link
+              to="/setup"
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+            >
+              <Settings2 className="h-4 w-4" />
+              Configurar cliente
+            </Link>
+          </div>
         </div>
 
         {profileQuery.isLoading ? (

@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/portal/app-shell";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AccountPage } from "@/pages/account-page";
+import { ClientSetupPage } from "@/pages/client-setup-page";
 import { AdminPage } from "@/pages/admin-page";
 import { CalendarPage } from "@/pages/calendar-page";
 import { ContactsPage } from "@/pages/contacts-page";
@@ -42,6 +43,14 @@ export function AppRoutes() {
           element={
             <ProtectedRoute roles={["user"]}>
               <AccountPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/setup"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <ClientSetupPage />
             </ProtectedRoute>
           }
         />

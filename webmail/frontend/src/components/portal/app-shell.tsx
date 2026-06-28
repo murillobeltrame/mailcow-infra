@@ -11,6 +11,7 @@ type NavItem = { to: string; label: string; roles: UserRole[] };
 const nav: NavItem[] = [
   { to: "/", label: "E-mail", roles: ["user"] },
   { to: "/account", label: "Minha conta", roles: ["user"] },
+  { to: "/setup", label: "Configurar e-mail", roles: ["user"] },
   { to: "/calendar", label: "Calendário", roles: ["user"] },
   { to: "/contacts", label: "Contactos", roles: ["user"] },
   { to: "/admin", label: "Administração", roles: ["admin"] },
