@@ -28,8 +28,12 @@ function parseEnvExports(text) {
 
 const script = readFileSync(scriptPath, "utf8");
 const envExports = existsSync(envPath) ? parseEnvExports(readFileSync(envPath, "utf8")) : "";
+const extraExports = ["CF_TOKEN"]
+  .filter((k) => process.env[k])
+  .map((k) => `export ${k}='${process.env[k].replace(/'/g, `'\\''`)}'`)
+  .join("\n");
 const remote = `/tmp/mailcow-ssh-${Date.now()}.sh`;
-const wrapper = `${envExports}\n${script}`.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+const wrapper = `${envExports}\n${extraExports}\n${script}`.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
 connectSsh(env, {
   onReady: (conn) => {
