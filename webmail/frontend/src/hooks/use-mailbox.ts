@@ -26,6 +26,7 @@ export function useMailbox() {
     queryKey: mailKeys.message(activeFolder, selectedUid ?? 0),
     queryFn: () => api.message(activeFolder, selectedUid!),
     enabled: selectedUid !== null,
+    retry: 1,
   });
 
   const activeFolderName = useMemo(
@@ -70,7 +71,8 @@ export function useMailbox() {
     messages: messagesQuery.data ?? [],
     messagesLoading: messagesQuery.isLoading,
     message: messageQuery.data ?? null,
-    messageLoading: messageQuery.isLoading,
+    messageLoading: messageQuery.isPending,
+    messageError: messageQuery.error,
     activeFolder,
     activeFolderName,
     selectedUid,

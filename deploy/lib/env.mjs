@@ -84,8 +84,8 @@ export function isCiEnvironment() {
 }
 
 /**
- * Comandos de release (código/branding no repo) — preferir GitHub Actions.
- * Configuração e operação usam SSH local (deploy.mjs sem bloqueio).
+ * Comandos de release (código no repo) — GitHub Actions.
+ * SSH local: diagnóstico (`ssh`, `validate`) e preview (`branding-local`).
  */
 export function requireDeployPipeline(command = "deploy") {
   if (isCiEnvironment()) return;
@@ -98,10 +98,10 @@ export function requireDeployPipeline(command = "deploy") {
   console.error("  git add / commit / push   → Actions aplica no VPS");
   console.error("  gh workflow run \"Deploy Nive Mail\" -f command=" + command);
   console.error("");
-  console.error("Desenvolvimento rápido (sem commit):");
-  console.error("  node deploy.mjs branding-local   # testa logo/CSS via SSH");
-  console.error("  node deploy.mjs ssh <script>   # configuração no VPS");
-  console.error("  node deploy.mjs validate       # health check");
+  console.error("SSH local (diagnóstico / operação, sem publicar código):");
+  console.error("  node deploy.mjs ssh <script.sh>   # investigar problemas no VPS");
+  console.error("  node deploy.mjs validate          # health check");
+  console.error("  node deploy.mjs branding-local    # preview logo/CSS (dev)");
   console.error("");
   console.error("Emergência: ALLOW_LOCAL_DEPLOY=1 node deploy.mjs " + command);
   process.exit(1);

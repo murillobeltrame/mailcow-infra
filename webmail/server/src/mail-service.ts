@@ -203,19 +203,52 @@ function hasAttachments(structure: unknown): boolean {
   return false;
 }
 
+async function streamToBuffer(stream: AsyncIterable<Buffer | string>): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+async function markSeen(client: ImapFlow, uid: number) {
+  try {
+    await client.messageFlagsAdd({ uid }, ["\\Seen"], { uid: true });
+  } catch {
+    /* Pastas Sent/Drafts podem rejeitar flags */
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} excedeu ${Math.round(ms / 1000)}s`)), ms);
+    }),
+  ]);
+}
+
 export async function getMessage(session: MailSession, folder: string, uid: number): Promise<MessageDetail> {
+  return withTimeout(getMessageInner(session, folder, uid), 45_000, "Leitura da mensagem");
+}
+
+async function getMessageInner(session: MailSession, folder: string, uid: number): Promise<MessageDetail> {
   const client = createImapClient(session);
   await client.connect();
   const lock = await client.getMailboxLock(folder);
   try {
-    let raw = "";
-    for await (const msg of client.fetch(String(uid), { uid: true, source: true }, { uid: true })) {
-      raw = msg.source?.toString("utf8") ?? "";
-      if (!msg.flags?.has("\\Seen")) {
-        await client.messageFlagsAdd({ uid: msg.uid }, ["\\Seen"], { uid: true });
-      }
+    const { content } = await client.download(String(uid), undefined, { uid: true });
+    const rawBuffer = await streamToBuffer(content);
+
+    if (!rawBuffer.length) {
+      const err = new Error("Mensagem não encontrada") as Error & { statusCode: number };
+      err.statusCode = 404;
+      throw err;
     }
-    const parsed = await simpleParser(raw);
+
+    await markSeen(client, uid);
+
+    const parsed = await simpleParser(rawBuffer);
     const from = parsed.from?.value?.[0];
 
     const toAddresses = Array.isArray(parsed.to)

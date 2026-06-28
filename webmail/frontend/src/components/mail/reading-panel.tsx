@@ -7,6 +7,7 @@ import { initials } from "@/lib/utils";
 type ReadingPanelProps = {
   message: MessageDetail | null;
   loading: boolean;
+  error?: Error | null;
   showBack?: boolean;
   onBack?: () => void;
   onReply: () => void;
@@ -16,6 +17,7 @@ type ReadingPanelProps = {
 export function ReadingPanel({
   message,
   loading,
+  error,
   showBack,
   onBack,
   onReply,
@@ -28,6 +30,27 @@ export function ReadingPanel({
         <Skeleton className="mb-2 h-7 w-3/4 max-w-lg" />
         <Skeleton className="mb-6 h-4 w-1/3" />
         <Skeleton className="h-48 w-full rounded-xl" />
+      </section>
+    );
+  }
+
+  if (error && !message) {
+    return (
+      <section className="mail-surface flex min-w-0 flex-1 flex-col">
+        {showBack && onBack && (
+          <div className="border-b border-border/60 px-4 py-2 md:hidden">
+            <Button variant="ghost" size="sm" className="rounded-lg" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
+        )}
+        <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+          <p className="text-base font-medium">Não foi possível abrir o e-mail</p>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "Erro desconhecido"}
+          </p>
+        </div>
       </section>
     );
   }

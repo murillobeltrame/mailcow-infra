@@ -81,15 +81,6 @@ jobs:
           EXTRA_CLOUDFLARE_ZONE_ID: ${{ secrets.EXTRA_CLOUDFLARE_ZONE_ID }}
           GIT_REPO: ${{ secrets.GIT_REPO }}
 
-      - name: Definir comando
-        id: cmd
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "command=${{ github.event.inputs.command }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "command=branding" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Preflight TCP 22
         run: |
           for i in 1 2 3; do
@@ -103,8 +94,39 @@ jobs:
           echo "::warning::Porta 22 bloqueada do runner GitHub — libere no hPanel Hostinger"
           exit 0
 
-      - name: Run deploy command
+      - name: Definir e executar deploy
         working-directory: deploy
-        run: node deploy.mjs "${{ steps.cmd.outputs.command }}"
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            node deploy.mjs "${{ github.event.inputs.command }}"
+            exit 0
+          fi
+
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="HEAD~1"
+          fi
+          CHANGED="$(git diff --name-only "$BASE" HEAD 2>/dev/null || true)"
+          echo "Arquivos alterados:"
+          echo "$CHANGED"
+
+          RUN_WEBMAIL=false
+          RUN_BRANDING=false
+          echo "$CHANGED" | grep -q '^webmail/' && RUN_WEBMAIL=true || true
+          echo "$CHANGED" | grep -qE '^(branding/|deploy/)' && RUN_BRANDING=true || true
+
+          if [ "$RUN_WEBMAIL" = false ] && [ "$RUN_BRANDING" = false ]; then
+            RUN_BRANDING=true
+          fi
+
+          if [ "$RUN_WEBMAIL" = true ]; then
+            echo "==> Deploy webmail (webmail/ alterado)"
+            node deploy.mjs webmail
+          fi
+          if [ "$RUN_BRANDING" = true ]; then
+            echo "==> Deploy branding (branding/ ou deploy/ alterado)"
+            node deploy.mjs branding
+          fi
         env:
           DEPLOY_DKIM_WAIT_SEC: ${{ vars.DEPLOY_DKIM_WAIT_SEC || '120' }}

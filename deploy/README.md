@@ -4,110 +4,72 @@ Dois fluxos complementares:
 
 | Fluxo | Quando usar | Como |
 |-------|-------------|------|
-| **SSH local** | Configuração, DNS, caixas, validação, fixes rápidos | `node deploy.mjs …` na sua máquina |
-| **GitHub Actions** | Código versionado (branding, scripts, melhorias) | `git push` ou workflow manual |
+| **GitHub Actions** | Código versionado (webmail, branding, scripts de deploy) | `git commit` + `git push` |
+| **SSH local** | Diagnóstico, DNS, validação, fixes pontuais no VPS | `node deploy.mjs ssh …` |
 
-O deploy via Actions fica **sempre preparado** — qualquer mudança em `branding/`, `webmail/` ou `deploy/` dispara o pipeline. Para operação do dia a dia, use SSH local: é mais rápido e não exige commit.
+**Regra:** alterações em `webmail/`, `branding/` ou `deploy/` → **commit e push**. O Actions detecta o que mudou e roda `webmail` e/ou `branding`. SSH local fica para investigar problemas difíceis (`ssh`, `validate`), não para publicar código.
 
 ---
 
-## SSH local (desenvolvimento e configuração)
+## GitHub Actions (produção)
 
-Requisitos: `deploy/.env.deploy` preenchido (veja [Setup inicial](#setup-inicial-uma-vez)).
+```bash
+git add webmail/ branding/ deploy/
+git commit -m "Descrição da mudança"
+git push origin master
+```
+
+O workflow **Deploy Nive Mail** dispara automaticamente:
+
+| Pastas alteradas | Comando no VPS |
+|------------------|----------------|
+| `webmail/**` | `webmail` (build Docker + nginx + redirects) |
+| `branding/**` ou `deploy/**` | `branding` (logo, CSS, SOGo) |
+| Ambas | os dois, em sequência |
+
+Acompanhe: https://github.com/murillobeltrame/mailcow-infra/actions
+
+### Workflow manual
+
+```powershell
+gh workflow run "Deploy Nive Mail" -f command=webmail
+gh workflow run "Deploy Nive Mail" -f command=branding
+gh workflow run "Deploy Nive Mail" -f command=validate
+```
+
+### Comandos bloqueados localmente
+
+| Comando | Use em vez disso |
+|---------|------------------|
+| `branding` | `git push` |
+| `webmail` | `git push` |
+| `update` / `full` | workflow manual |
+
+Emergência: `ALLOW_LOCAL_DEPLOY=1 node deploy.mjs webmail`
+
+---
+
+## SSH local (diagnóstico e operação)
+
+Requisitos: `deploy/.env.deploy` preenchido.
 
 ```powershell
 cd deploy
 
-# Health check
+# Diagnóstico / investigação no VPS
+node deploy.mjs ssh verify-webmail.sh
+node deploy.mjs ssh fix-sogo-all.sh
+
+# Health check, DNS, migração
 node deploy.mjs validate
-
-# DNS Cloudflare
-node deploy.mjs dns
 node deploy.mjs dns-dkim
-
-# Migração de e-mail (domínios + caixas + DNS)
 node deploy.mjs migrate-email
 
-# Script arbitrário no VPS
-node deploy.mjs ssh fix-mail-vps-standalone.sh
-node deploy.mjs ssh add-domain-vps.sh
-
-# Preview de logo/CSS sem commit (dev)
+# Preview de logo/CSS antes do commit (dev)
 node deploy.mjs branding-local
-
-# SSL, API, bootstrap…
-node deploy.mjs ssl-fix
-node deploy.mjs test-api
-node deploy.mjs bootstrap
-node deploy.mjs enable-sogo     # webmail SOGo
-node deploy.mjs fix-sogo        # corrige SSO/webmail SOGo no VPS
-node deploy.mjs disable-sogo    # desativa SOGo (economia RAM)
-node deploy.mjs webmail         # webmail moderno React em /mail/
-node deploy.mjs redirect-webmail # redireciona login Mailcow para /mail/
 ```
 
-Comandos locais **não** exigem GitHub Actions. Usam `_ssh-run.mjs` com retry de conexão SSH.
-
----
-
-## GitHub Actions (código e release)
-
-Use quando alterar arquivos versionados no repositório:
-
-```bash
-git add branding/nive-logo.svg deploy/fix-mail-vps.sh
-git commit -m "Atualiza logo e script de fix"
-git push origin master
-```
-
-Acompanhe: https://github.com/murillobeltrame/mailcow-infra/actions
-
-Push em `branding/` ou `deploy/` dispara **`branding`** automaticamente.
-
-### Comandos bloqueados localmente
-
-Estes publicam código do repo — o CLI orienta usar Actions:
-
-| Comando | Motivo |
-|---------|--------|
-| `branding` | Logo/CSS versionados |
-| `update` | Mailcow upstream + branding |
-| `full` | Instalação completa |
-
-Alternativas locais:
-
-- **`branding-local`** — mesmo efeito do branding, sem commit (só dev/preview)
-- **`ALLOW_LOCAL_DEPLOY=1`** — emergência se Actions estiver indisponível
-
-```powershell
-$env:ALLOW_LOCAL_DEPLOY="1"
-node deploy.mjs branding
-node deploy.mjs update
-```
-
-### Workflow manual
-
-**Site:** Actions → **Deploy Nive Mail** → Run workflow → escolha o comando.
-
-**CLI:**
-
-```powershell
-gh workflow run "Deploy Nive Mail" -f command=update
-gh workflow run "Deploy Nive Mail" -f command=validate
-gh workflow run "Deploy Nive Mail" -f command=dns-dkim
-```
-
-### Comandos no Actions
-
-| Comando | Uso |
-|---------|-----|
-| `branding` | Logo + CSS *(padrão no push)* |
-| `update` | Mailcow upstream + branding |
-| `dns` / `dns-dkim` | Cloudflare |
-| `validate` | Health check |
-| `migrate-email` | Migração completa |
-| `full` | Instalação VPS novo |
-| `setup` / `tune` / `ssl` / … | Operações SSH |
+**Não use** `node deploy.mjs webmail` ou `branding` localmente para produção — faça push.
 
 ---
 
@@ -141,11 +103,10 @@ Opcionais com padrão: `VPS_IP`, `MAILCOW_HOSTNAME`, `MAIL_DOMAIN`, etc. — vej
 
 | Objetivo | Ação recomendada |
 |----------|------------------|
-| Testar fix no VPS agora | `node deploy.mjs ssh fix-….sh` |
+| Mudou webmail / branding / deploy | `git push` → Actions |
+| Investigar problema no VPS | `node deploy.mjs ssh <script.sh>` |
+| Validar produção | `node deploy.mjs validate` ou workflow `validate` |
 | Ajustar DNS / DKIM | `node deploy.mjs dns-dkim` |
-| Validar produção | `node deploy.mjs validate` |
-| Mudou logo/CSS no repo | `git push` → Actions |
-| Mudou script de deploy | `git push` (ou workflow `update`) |
 | Preview logo antes do commit | `node deploy.mjs branding-local` |
 | Atualizar Mailcow upstream | workflow `update` |
 | VPS novo | workflow `full` |

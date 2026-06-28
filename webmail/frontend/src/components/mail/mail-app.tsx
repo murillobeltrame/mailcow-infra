@@ -119,6 +119,7 @@ export function MailApp() {
             <ReadingPanel
               message={mailbox.message}
               loading={mailbox.messageLoading && showingMessage}
+              error={mailbox.messageError}
               onReply={openReply}
               onDelete={() => {
                 if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
@@ -132,6 +133,7 @@ export function MailApp() {
               <ReadingPanel
                 message={mailbox.message}
                 loading={mailbox.messageLoading}
+                error={mailbox.messageError}
                 showBack
                 onBack={() => mailbox.setSelectedUid(null)}
                 onReply={openReply}

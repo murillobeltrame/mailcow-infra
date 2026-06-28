@@ -3,8 +3,8 @@
  * CLI — Mailcow Nive Mail
  *
  * Dois fluxos:
- *   • SSH local (deploy.mjs) — configuração, DNS, caixas, validação (rápido)
- *   • GitHub Actions — branding/update/full quando o código do repo muda
+ *   • GitHub Actions — branding, webmail, update (código versionado)
+ *   • SSH local — diagnóstico, DNS, validação, scripts operacionais
  */
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
@@ -16,8 +16,8 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ENV_PATH = join(__dir, ".env.deploy");
 const ENV_EXAMPLE = join(__dir, ".env.deploy.example");
 
-/** Release: código versionado → preferir CI */
-const PIPELINE_COMMANDS = new Set(["branding", "update", "full"]);
+/** Release: código versionado → GitHub Actions (SSH local só diagnóstico). */
+const PIPELINE_COMMANDS = new Set(["branding", "update", "full", "webmail"]);
 
 function getEnv() {
   if (!existsSync(ENV_PATH) && !process.env.VPS_SSH_PASS && !process.env.VPS_SSH_KEY) {
@@ -116,6 +116,7 @@ const commands = {
   },
 
   webmail() {
+    requireDeployPipeline("webmail");
     runNode("upload-webmail.mjs", [], getEnv());
   },
 
@@ -202,8 +203,8 @@ const commands = {
     console.log(`
 Mailcow Nive Mail — deploy
 
-── SSH local (config / operação, rápido) ──
-  node deploy.mjs ssh <script.sh>   Roda script no VPS via SSH
+── SSH local (diagnóstico / operação — não publica código) ──
+  node deploy.mjs ssh <script.sh>   Investigar ou corrigir no VPS
   node deploy.mjs validate          Health check
   node deploy.mjs dns               Cloudflare MX/SPF/DMARC
   node deploy.mjs dns-dkim          + DKIM
@@ -211,12 +212,12 @@ Mailcow Nive Mail — deploy
   node deploy.mjs ssl-fix           Corrige HTTPS
   node deploy.mjs test-api          Testa API Mailcow
   node deploy.mjs branding-local    Preview logo/CSS (dev, sem commit)
-  node deploy.mjs webmail           Webmail moderno React + redirect
-  node deploy.mjs redirect-webmail  Aponta login Mailcow para /mail/
 
-── GitHub Actions (código do repo) ──
-  git push                          branding/ ou deploy/ → Actions
-  node deploy.mjs branding          Bloqueado local — use push ou workflow
+── GitHub Actions (commit + push → produção) ──
+  git push                          webmail/ branding/ deploy/ → Actions
+  gh workflow run "Deploy Nive Mail" -f command=webmail
+  node deploy.mjs branding          Bloqueado local — use push
+  node deploy.mjs webmail           Bloqueado local — use push
   node deploy.mjs update            Mailcow upstream + branding (CI)
   node deploy.mjs full              Instalação completa (CI)
 
