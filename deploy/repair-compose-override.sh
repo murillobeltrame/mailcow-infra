@@ -24,6 +24,28 @@ MAILCOW_DB_USER="$(grep '^DBUSER=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- 
 MAILCOW_DB_PASS="$(grep '^DBPASS=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
 MAILCOW_DB_NAME="$(grep '^DBNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
 
+read_conf_var() {
+  grep "^${1}=" "${MAILCOW_DIR}/mailcow.conf" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\r"' || true
+}
+
+CMS_ENV="/var/www/stepgosistemassite/.env"
+PROVISIONING_SECRET="$(read_conf_var PROVISIONING_SECRET)"
+STEPGO_SITE_API_URL="$(read_conf_var STEPGO_SITE_API_URL)"
+STEPGO_SITE_API_URL="${STEPGO_SITE_API_URL:-http://host.docker.internal:3000}"
+
+if [[ -z "${PROVISIONING_SECRET}" && -f "${CMS_ENV}" ]]; then
+  PROVISIONING_SECRET="$(grep '^PROVISIONING_SECRET=' "${CMS_ENV}" | head -1 | cut -d= -f2- | tr -d '"')"
+fi
+if [[ -z "${STEPGO_SITE_API_URL}" && -f "${CMS_ENV}" ]]; then
+  STEPGO_SITE_API_URL="http://host.docker.internal:3000"
+fi
+PROVISIONING_SECRET="${PROVISIONING_SECRET:-}"
+
+if [[ -z "${PROVISIONING_SECRET}" ]]; then
+  echo "AVISO: PROVISIONING_SECRET ausente — reporte de falhas de login ao CMS Nive desativado."
+  echo "       Rode: bash /var/www/stepgosistemassite/deploy/sync-security-env.sh"
+fi
+
 if [[ -z "${MAILCOW_API_KEY}" ]]; then
   echo "API_KEY ausente em mailcow.conf" >&2
   exit 1
@@ -52,7 +74,7 @@ services:
       - PORT=8080
       - COOKIE_PATH=/mail/
       - PROVISIONING_SECRET=${PROVISIONING_SECRET}
-      - STEPGO_SITE_API_URL=${STEPGO_SITE_API_URL:-http://host.docker.internal:3000}
+      - STEPGO_SITE_API_URL=${STEPGO_SITE_API_URL}
       - CLIENT_MAIL_HOST=${CLIENT_MAIL_HOST}
       - IMAP_TLS_SERVERNAME=${MAILCOW_HOSTNAME}
       - IMAP_TLS_REJECT_UNAUTHORIZED=false
