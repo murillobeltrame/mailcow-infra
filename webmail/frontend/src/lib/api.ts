@@ -70,7 +70,7 @@ export type MailboxProfile = {
   domain?: string;
   quota?: number;
   quota_used?: number;
-  percent_in_use?: string;
+  percent_in_use?: string | number;
   messages?: number;
   created?: string;
   attributes?: Record<string, string | null>;

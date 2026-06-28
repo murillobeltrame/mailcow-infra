@@ -19,7 +19,10 @@ function formatQuota(profile: MailboxProfile): string {
   const used = profile.quota_used ?? 0;
   const quota = profile.quota ?? 0;
   if (!quota || quota === 0) return `${used} MB usados · quota ilimitada`;
-  const pct = profile.percent_in_use?.trim();
+  const pct =
+    profile.percent_in_use != null && profile.percent_in_use !== ""
+      ? String(profile.percent_in_use).trim()
+      : undefined;
   return `${used} / ${quota} MB${pct && pct !== "-" ? ` (${pct})` : ""}`;
 }
 
