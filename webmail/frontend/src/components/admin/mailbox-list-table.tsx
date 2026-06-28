@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { HardDrive, KeyRound, Mail, Pencil, Trash2, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,34 @@ import {
   parseQuotaToMb,
   quotaUsagePercent,
 } from "@/lib/quota-utils";
+import { cn } from "@/lib/utils";
+
+function FormSection({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-0.5 pt-0.5">
+          <h3 className="text-sm font-medium leading-none">{title}</h3>
+          {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        </div>
+      </div>
+      <div className="pl-12">{children}</div>
+    </section>
+  );
+}
 
 type MailboxScope = "admin" | "domain";
 
@@ -189,131 +217,166 @@ export function MailboxListTable({ mailboxes, loading, scope, emptyMessage, onCh
       </div>
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+          <DialogHeader className="space-y-3 border-b border-border/60 bg-muted/20 px-6 py-5 pr-12">
             <DialogTitle>Editar caixa postal</DialogTitle>
-            <DialogDescription className="font-mono text-xs">{editing?.username}</DialogDescription>
+            <DialogDescription asChild>
+              <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-background px-3 py-2">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate font-mono text-xs text-foreground">{editing?.username}</span>
+              </div>
+            </DialogDescription>
           </DialogHeader>
-          <form className="space-y-5 pt-1" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="mb-edit-name">Nome exibido</Label>
-              <Input
-                id="mb-edit-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nome do remetente"
-                required
-              />
-            </div>
 
-            <fieldset className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
-              <legend className="px-1 text-sm font-medium">Armazenamento</legend>
-
-              {editingUsage && (
+          <form onSubmit={handleSubmit}>
+            <div className="max-h-[min(60vh,520px)] space-y-6 overflow-y-auto px-6 py-5">
+              <FormSection icon={UserRound} title="Identidade" description="Nome exibido ao enviar e-mails">
                 <div className="space-y-2">
-                  <div className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className="text-muted-foreground">Uso atual</span>
-                    <span className="tabular-nums font-medium">
-                      {formatStorageMb(editingUsage.usedMb)}
-                      {!isUnlimitedQuotaMb(editingUsage.totalMb) && (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          de {formatQuotaMb(editingUsage.totalMb)}
-                        </span>
-                      )}
+                  <Label htmlFor="mb-edit-name" className="sr-only">
+                    Nome exibido
+                  </Label>
+                  <Input
+                    id="mb-edit-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nome do remetente"
+                    required
+                  />
+                </div>
+              </FormSection>
+
+              <div className="border-t border-border/40" />
+
+              <FormSection icon={HardDrive} title="Armazenamento" description="Uso atual e limite da caixa">
+                {editingUsage && (
+                  <div className="mb-4 rounded-xl border border-border/50 bg-muted/30 p-3">
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground">Uso atual</span>
+                      <span className="tabular-nums font-medium">
+                        {formatStorageMb(editingUsage.usedMb)}
+                        {!isUnlimitedQuotaMb(editingUsage.totalMb) && (
+                          <span className="font-normal text-muted-foreground">
+                            {" "}
+                            / {formatQuotaMb(editingUsage.totalMb)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {!isUnlimitedQuotaMb(editingUsage.totalMb) && editingUsage.percent != null ? (
+                      <div className="mt-2.5 space-y-1.5">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-background">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              editingUsage.percent >= 90 ? "bg-destructive" : "bg-primary",
+                            )}
+                            style={{ width: `${Math.max(editingUsage.percent, 2)}%` }}
+                          />
+                        </div>
+                        <p className="text-right text-xs tabular-nums text-muted-foreground">
+                          {editingUsage.percent}% utilizado
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-1.5 text-xs text-muted-foreground">Quota ilimitada</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="mb-edit-quota">Limite de quota</Label>
+                  <div className="relative">
+                    <Input
+                      id="mb-edit-quota"
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="numeric"
+                      value={quota}
+                      onChange={(e) => setQuota(e.target.value)}
+                      className="pr-12 tabular-nums"
+                      required
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground">
+                      MB
                     </span>
                   </div>
-                  {!isUnlimitedQuotaMb(editingUsage.totalMb) && editingUsage.percent != null && (
-                    <div className="space-y-1">
-                      <div className="h-2 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${editingUsage.percent}%` }}
-                        />
-                      </div>
-                      <p className="text-right text-xs tabular-nums text-muted-foreground">
-                        {editingUsage.percent}% utilizado
-                      </p>
+                  <p className="text-xs text-muted-foreground">
+                    {quotaPreviewMb != null && Number.isFinite(quotaPreviewMb) ? (
+                      isUnlimitedQuotaMb(quotaPreviewMb) ? (
+                        <>Use <span className="font-medium text-foreground">0</span> para quota ilimitada.</>
+                      ) : (
+                        <>
+                          Equivale a{" "}
+                          <span className="font-medium text-foreground">{formatQuotaMb(quotaPreviewMb)}</span>.
+                          Use 0 para ilimitada.
+                        </>
+                      )
+                    ) : (
+                      <>Informe o limite em megabytes. Use 0 para ilimitada.</>
+                    )}
+                  </p>
+                </div>
+              </FormSection>
+
+              <div className="border-t border-border/40" />
+
+              <label
+                htmlFor="mb-edit-active"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-border/50 px-4 py-3 transition hover:bg-muted/30"
+              >
+                <div>
+                  <p className="text-sm font-medium">Caixa ativa</p>
+                  <p className="text-xs text-muted-foreground">Permite enviar e receber e-mails</p>
+                </div>
+                <input
+                  id="mb-edit-active"
+                  type="checkbox"
+                  className="h-4 w-4 shrink-0 rounded border-border accent-primary"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                />
+              </label>
+
+              <div className="border-t border-border/40" />
+
+              <FormSection
+                icon={KeyRound}
+                title="Alterar senha"
+                description="Deixe em branco para manter a senha atual"
+              >
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="mb-edit-pass">Nova senha</Label>
+                    <PasswordInput
+                      id="mb-edit-pass"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Opcional"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  {password.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="mb-edit-pass2">Confirmar senha</Label>
+                      <PasswordInput
+                        id="mb-edit-pass2"
+                        value={passwordConfirm}
+                        onChange={(e) => setPasswordConfirm(e.target.value)}
+                        placeholder="Repita a nova senha"
+                        autoComplete="new-password"
+                        aria-invalid={passwordConfirm.length > 0 && password !== passwordConfirm}
+                      />
+                      {passwordConfirm.length > 0 && password !== passwordConfirm && (
+                        <p className="text-xs text-destructive">As senhas não coincidem.</p>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="mb-edit-quota">Quota (MB)</Label>
-                <Input
-                  id="mb-edit-quota"
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  value={quota}
-                  onChange={(e) => setQuota(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  {quotaPreviewMb != null && Number.isFinite(quotaPreviewMb) ? (
-                    isUnlimitedQuotaMb(quotaPreviewMb) ? (
-                      <>0 MB = quota ilimitada</>
-                    ) : (
-                      <>
-                        Equivale a <span className="font-medium">{formatQuotaMb(quotaPreviewMb)}</span>
-                        . Use 0 para ilimitada.
-                      </>
-                    )
-                  ) : (
-                    <>Informe o limite em megabytes. Use 0 para ilimitada.</>
-                  )}
-                </p>
-              </div>
-            </fieldset>
-
-            <div className="flex items-center gap-2 rounded-lg border border-border/40 px-3 py-2.5">
-              <input
-                id="mb-edit-active"
-                type="checkbox"
-                className="h-4 w-4 rounded border-border"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-              />
-              <Label htmlFor="mb-edit-active" className="cursor-pointer font-normal">
-                Caixa ativa
-              </Label>
+              </FormSection>
             </div>
 
-            <fieldset className="space-y-3 rounded-xl border border-border/60 p-4">
-              <legend className="px-1 text-sm font-medium">Senha</legend>
-              <p className="text-xs text-muted-foreground">
-                Deixe em branco para manter a senha atual.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="mb-edit-pass">Nova senha</Label>
-                <PasswordInput
-                  id="mb-edit-pass"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Opcional"
-                  autoComplete="new-password"
-                />
-              </div>
-              {password.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="mb-edit-pass2">Confirmar senha</Label>
-                  <PasswordInput
-                    id="mb-edit-pass2"
-                    value={passwordConfirm}
-                    onChange={(e) => setPasswordConfirm(e.target.value)}
-                    placeholder="Repita a nova senha"
-                    autoComplete="new-password"
-                  />
-                  {passwordConfirm.length > 0 && password !== passwordConfirm && (
-                    <p className="text-xs text-destructive">As senhas não coincidem.</p>
-                  )}
-                </div>
-              )}
-            </fieldset>
-
-            <div className="flex justify-end gap-2 border-t border-border/60 pt-4">
+            <div className="flex justify-end gap-2 border-t border-border/60 bg-muted/10 px-6 py-4">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>
                 Cancelar
               </Button>
@@ -324,7 +387,7 @@ export function MailboxListTable({ mailboxes, loading, scope, emptyMessage, onCh
                   (password.length > 0 && password !== passwordConfirm)
                 }
               >
-                {updateMailbox.isPending ? "Salvando…" : "Salvar"}
+                {updateMailbox.isPending ? "Salvando…" : "Salvar alterações"}
               </Button>
             </div>
           </form>
