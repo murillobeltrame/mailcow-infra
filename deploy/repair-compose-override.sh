@@ -43,12 +43,16 @@ services:
     image: nive-mail-web:latest
     container_name: nive-mail-web
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - mailcow-network
     environment:
       - NODE_ENV=production
       - PORT=8080
       - COOKIE_PATH=/mail/
+      - PROVISIONING_SECRET=${PROVISIONING_SECRET}
+      - STEPGO_SITE_API_URL=${STEPGO_SITE_API_URL:-http://host.docker.internal:3000}
       - CLIENT_MAIL_HOST=${CLIENT_MAIL_HOST}
       - IMAP_TLS_SERVERNAME=${MAILCOW_HOSTNAME}
       - IMAP_TLS_REJECT_UNAUTHORIZED=false

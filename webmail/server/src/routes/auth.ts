@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { authenticateLogin } from "../auth-service.js";
+import { reportLoginFailureToNive } from "../nive-security-report.js";
 import { config } from "../config.js";
 import {
   getRequestSession,
@@ -13,17 +14,17 @@ import { createSession } from "../session.js";
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post("/api/auth/login", async (request, reply) => {
+    const body = request.body as {
+      email?: string;
+      login?: string;
+      password?: string;
+      loginAs?: "user" | "admin" | "domainadmin";
+      role?: "user" | "admin" | "domainadmin";
+    };
+    const login = (body.login ?? body.email)?.trim();
+    const password = body.password;
+    const loginAs = body.loginAs ?? body.role ?? "user";
     try {
-      const body = request.body as {
-        email?: string;
-        login?: string;
-        password?: string;
-        loginAs?: "user" | "admin" | "domainadmin";
-        role?: "user" | "admin" | "domainadmin";
-      };
-      const login = (body.login ?? body.email)?.trim();
-      const password = body.password;
-      const loginAs = body.loginAs ?? body.role ?? "user";
       if (!password) {
         return reply.status(400).send({ error: "Senha é obrigatória" });
       }
@@ -45,6 +46,10 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       refreshSessionCookie(reply, session);
       return publicUser(session);
     } catch (err) {
+      const statusCode = (err as { statusCode?: number }).statusCode;
+      if (statusCode === 401) {
+        reportLoginFailureToNive(request, `${loginAs}:${login ?? "admin"}`);
+      }
       return handleRouteError(reply, err);
     }
   });
