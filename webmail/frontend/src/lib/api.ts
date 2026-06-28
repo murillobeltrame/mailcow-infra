@@ -64,6 +64,14 @@ export type AdminDashboard = {
   containersTotal: number;
 };
 
+export type DomainAdminRow = {
+  username?: string;
+  active?: string;
+  created?: string;
+  selected_domains?: string[];
+  tfa_active?: string;
+};
+
 export type MailboxProfile = {
   username?: string;
   name?: string;
@@ -205,6 +213,37 @@ export const api = {
         force_pw_update: "0",
         password2: data.password,
       }),
+    });
+  },
+  adminDomainAdmins() {
+    return request<{ domainAdmins: DomainAdminRow[] }>("/api/admin/domain-admins");
+  },
+  adminCreateDomainAdmin(data: {
+    username: string;
+    password: string;
+    domains: string[];
+  }) {
+    return request<{ ok: boolean }>("/api/admin/domain-admins", {
+      method: "POST",
+      body: JSON.stringify({ ...data, active: "1" }),
+    });
+  },
+  adminUpdateDomainAdmin(data: {
+    username: string;
+    password?: string;
+    domains?: string[];
+    active?: boolean;
+    currentActive?: string;
+  }) {
+    return request<{ ok: boolean }>("/api/admin/domain-admins", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+  adminDeleteDomainAdmin(username: string) {
+    return request<{ ok: boolean }>("/api/admin/domain-admins", {
+      method: "DELETE",
+      body: JSON.stringify({ username }),
     });
   },
   domainDomains() {

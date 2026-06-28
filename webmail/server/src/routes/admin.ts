@@ -1,14 +1,18 @@
 import type { FastifyInstance } from "fastify";
 import {
   addDomain,
+  addDomainAdmin,
   addMailbox,
   assertSessionCanAccessDomain,
+  deleteDomainAdmin,
+  editDomainAdmin,
   editMailbox,
   getContainerStatus,
   getHostStatus,
   getVersion,
   getVmailStatus,
   listAliases,
+  listDomainAdmins,
   listDomains,
   listMailboxes,
 } from "../mailcow-api.js";
@@ -129,6 +133,93 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       requireRoleSession(request, "admin");
       const q = request.query as { domain?: string };
       return { aliases: await listAliases(q.domain) };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.get("/api/admin/domain-admins", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      return { domainAdmins: await listDomainAdmins() };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.post("/api/admin/domain-admins", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      const body = request.body as {
+        username?: string;
+        password?: string;
+        domains?: string[];
+        active?: string;
+      };
+      const username = body.username?.trim().toLowerCase();
+      const password = body.password;
+      const domains = body.domains?.map((d) => d.trim().toLowerCase()).filter(Boolean);
+      if (!username) return reply.status(400).send({ error: "Usuário é obrigatório" });
+      if (!password) return reply.status(400).send({ error: "Senha é obrigatória" });
+      if (!domains?.length) return reply.status(400).send({ error: "Selecione ao menos um domínio" });
+      await addDomainAdmin({
+        username,
+        password,
+        password2: password,
+        domains: domains.join(","),
+        active: body.active ?? "1",
+      });
+      return { ok: true };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.patch("/api/admin/domain-admins", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      const body = request.body as {
+        username?: string;
+        password?: string;
+        domains?: string[];
+        active?: boolean;
+        currentActive?: string;
+      };
+      const username = body.username?.trim().toLowerCase();
+      if (!username) return reply.status(400).send({ error: "username é obrigatório" });
+
+      const attr: Record<string, unknown> = {
+        username_new: username,
+      };
+      if (body.domains?.length) {
+        attr.domains = body.domains.map((d) => d.trim().toLowerCase()).filter(Boolean);
+      }
+      if (body.password) {
+        attr.password = body.password;
+        attr.password2 = body.password;
+      }
+      if (body.active !== undefined && body.currentActive !== undefined) {
+        const to = body.active ? "1" : "0";
+        if (body.currentActive !== to) {
+          attr.active = [body.currentActive, to];
+        }
+      }
+
+      await editDomainAdmin({ items: [username], attr });
+      return { ok: true };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.delete("/api/admin/domain-admins", async (request, reply) => {
+    try {
+      requireRoleSession(request, "admin");
+      const body = request.body as { username?: string };
+      const username = body.username?.trim().toLowerCase();
+      if (!username) return reply.status(400).send({ error: "username é obrigatório" });
+      await deleteDomainAdmin([username]);
+      return { ok: true };
     } catch (err) {
       return handleRouteError(reply, err);
     }

@@ -149,6 +149,46 @@ export async function addDomain(attrs: Record<string, unknown>) {
   return mailcowRequest("POST", "add/domain", attrs);
 }
 
+export function assertMailcowSuccess(data: unknown): void {
+  const rows = Array.isArray(data) ? data : [data];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as ApiResult;
+    if (r.type === "danger" || r.type === "error") {
+      const msg = r.msg;
+      const message = Array.isArray(msg)
+        ? msg.map(String).join(" ")
+        : typeof msg === "string"
+          ? msg
+          : "Erro API Mailcow";
+      throw new MailcowApiError(message, 400, row);
+    }
+  }
+}
+
+export async function listDomainAdmins() {
+  const data = await mailcowRequest<unknown>("GET", "get/domain-admin/all");
+  return normalizeMailcowList<Record<string, unknown>>(data);
+}
+
+export async function addDomainAdmin(attrs: Record<string, unknown>) {
+  const data = await mailcowRequest("POST", "add/domain-admin", attrs);
+  assertMailcowSuccess(data);
+  return data;
+}
+
+export async function editDomainAdmin(attrs: Record<string, unknown>) {
+  const data = await mailcowRequest("POST", "edit/domain-admin", attrs);
+  assertMailcowSuccess(data);
+  return data;
+}
+
+export async function deleteDomainAdmin(usernames: string[]) {
+  const data = await mailcowRequest("POST", "delete/domain-admin", usernames);
+  assertMailcowSuccess(data);
+  return data;
+}
+
 export async function listAppPasswords(mailbox: string) {
   const data = await mailcowRequest<unknown>("GET", `get/app-passwd/all/${encodeURIComponent(mailbox)}`);
   return normalizeMailcowList(data);

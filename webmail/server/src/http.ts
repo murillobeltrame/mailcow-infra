@@ -77,8 +77,9 @@ export function clearSessionCookie(reply: FastifyReply) {
 }
 
 export function handleRouteError(reply: FastifyReply, err: unknown) {
-  const e = err as Error & { statusCode?: number };
-  return reply.status(e.statusCode ?? 500).send({ error: e.message || "Erro interno" });
+  const e = err as Error & { statusCode?: number; status?: number };
+  const code = e.statusCode ?? e.status ?? 500;
+  return reply.status(code).send({ error: e.message || "Erro interno" });
 }
 
 export function publicUser(session: PortalSession) {
