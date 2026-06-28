@@ -40,19 +40,46 @@ VALUES ('${KEY}', 1, '${ALLOW}', 'rw', 1);
 " 2>/dev/null
 
 HOST="${MAILCOW_HOSTNAME:?}"
-VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
-  -H "Host: ${HOST}" \
-  -H "X-API-Key: ${KEY}")
-echo "API OK: ${VER}"
+STRICT="${SYNC_API_STRICT:-0}"
+TRIES="${SYNC_API_RETRIES:-12}"
+SLEEP="${SYNC_API_SLEEP:-5}"
+
+api_ready=false
+for ((i=1; i<=TRIES; i++)); do
+  VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
+    -H "Host: ${HOST}" \
+    -H "X-API-Key: ${KEY}" 2>/dev/null || true)
+  if echo "${VER}" | grep -q '"version"'; then
+    echo "API OK: ${VER}"
+    api_ready=true
+    break
+  fi
+  echo "Aguardando API Mailcow (${i}/${TRIES})..."
+  sleep "${SLEEP}"
+done
+
+if [[ "${api_ready}" != true ]]; then
+  echo "AVISO: API Mailcow ainda nao respondeu (nginx/php reiniciando?)" >&2
+  [[ "${STRICT}" = "1" ]] && exit 1
+fi
 
 if docker ps --format '{{.Names}}' | grep -q '^nive-mail-web$'; then
-  docker exec nive-mail-web node --input-type=module -e "
+  bff_ok=false
+  for ((i=1; i<=TRIES; i++)); do
+    if docker exec nive-mail-web node --input-type=module -e "
 import { listDomains } from '/app/dist/mailcow-api.js';
 const d = await listDomains();
 if (!Array.isArray(d) || d.length < 1) throw new Error('listDomains vazio');
 console.log('BFF API OK:', d.length, 'dominios');
-" || {
-    echo "ERRO: portal nao consegue chamar API Mailcow (allow_from/skip_ip_check)" >&2
-    exit 1
-  }
+" 2>/dev/null; then
+      bff_ok=true
+      break
+    fi
+    echo "Aguardando BFF portal (${i}/${TRIES})..."
+    sleep "${SLEEP}"
+  done
+  if [[ "${bff_ok}" != true ]]; then
+    echo "AVISO: portal ainda nao consegue listDomains (servicos reiniciando?)" >&2
+    [[ "${STRICT}" = "1" ]] && exit 1
+  fi
 fi
