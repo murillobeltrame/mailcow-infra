@@ -65,9 +65,12 @@ export function setSessionCookie(reply: FastifyReply, sessionId: string) {
 }
 
 export function clearSessionCookie(reply: FastifyReply) {
+  const expired = new Date(0);
   const base = sessionCookieOptions();
   for (const path of CLEAR_PATHS) {
-    reply.clearCookie(SESSION_COOKIE, { ...base, path, maxAge: 0 });
+    const opts = { ...base, path, maxAge: 0, expires: expired };
+    reply.clearCookie(SESSION_COOKIE, opts);
+    reply.setCookie(SESSION_COOKIE, "", opts);
   }
 }
 
@@ -88,12 +91,14 @@ export function publicUser(session: PortalSession) {
 
 /** Invalida sessão server-side e remove cookies do browser. */
 export function terminateSession(request: FastifyRequest, reply: FastifyReply) {
+  const cookieId = getSessionCookieValue(request);
   const session = getRequestSession(request);
   if (session) {
     destroySession(session.id);
-  } else {
-    destroySession(getSessionCookieValue(request));
+  } else if (cookieId) {
+    destroySession(cookieId);
   }
   clearSessionCookie(reply);
-  reply.header("Cache-Control", "no-store");
+  reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
+  reply.header("Pragma", "no-cache");
 }

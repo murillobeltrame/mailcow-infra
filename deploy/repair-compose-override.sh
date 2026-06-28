@@ -10,10 +10,12 @@ MAILCOW_API_KEY="${MAILCOW_API_KEY:-}"
 MAILCOW_DB_USER="${MAILCOW_DB_USER:-}"
 MAILCOW_DB_PASS="${MAILCOW_DB_PASS:-}"
 MAILCOW_DB_NAME="${MAILCOW_DB_NAME:-}"
+MAILCOW_HOSTNAME="${MAILCOW_HOSTNAME:-mail.nivesistemas.com.br}"
 if [[ -f "${MAILCOW_DIR}/mailcow.conf" ]]; then
   if [[ -z "${MAILCOW_API_KEY}" ]]; then
     MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
   fi
+  MAILCOW_HOSTNAME="$(grep '^MAILCOW_HOSTNAME=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r"')"
   if [[ -z "${MAILCOW_DB_USER}" ]]; then
     MAILCOW_DB_USER="$(grep '^DBUSER=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
   fi
@@ -54,8 +56,9 @@ services:
       - SMTP_PORT=587
       - SIEVE_HOST=dovecot-mailcow
       - SIEVE_PORT=4190
-      - MAILCOW_API_URL=https://nginx-mailcow
+      - MAILCOW_API_URL=http://nginx-mailcow
       - MAILCOW_API_KEY=${MAILCOW_API_KEY}
+      - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
       - MAILCOW_DB_HOST=mysql-mailcow
       - MAILCOW_DB_USER=${MAILCOW_DB_USER}
       - MAILCOW_DB_PASS=${MAILCOW_DB_PASS}

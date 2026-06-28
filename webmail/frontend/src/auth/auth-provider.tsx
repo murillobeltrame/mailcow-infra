@@ -5,7 +5,6 @@ import { AuthContext, type LoginMode } from "./auth-context";
 import { api } from "@/lib/api";
 import type { User } from "@/lib/api";
 import { defaultRouteForRole } from "@/lib/roles";
-import { mailKeys } from "@/lib/query-keys";
 
 const LOGIN_URL = `${import.meta.env.BASE_URL.replace(/\/?$/, "/")}login`;
 
@@ -41,16 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    queryClient.removeQueries({ queryKey: mailKeys.all });
-    setUser(null);
     try {
       await api.logout();
     } catch {
-      /* mesmo com falha de rede, força saída no cliente */
-    } finally {
-      // Recarrega a página de login para garantir que o cookie expirado seja aplicado
-      window.location.replace(LOGIN_URL);
+      /* encerra localmente mesmo se a rede falhar */
     }
+    queryClient.clear();
+    setUser(null);
+    window.location.replace(`${LOGIN_URL}?logout=${Date.now()}`);
   }, [queryClient]);
 
   const value = useMemo(

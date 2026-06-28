@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import { mailcowFetch } from "./mailcow-fetch.js";
 import type { PortalSession, UserRole } from "./session.js";
 
 type ApiResult = {
@@ -32,7 +33,7 @@ export async function mailcowRequest<T = ApiResult>(
   body?: unknown,
 ): Promise<T> {
   const url = `${config.mailcowApiUrl}/api/v1/${path.replace(/^\//, "")}`;
-  const res = await fetch(url, {
+  const res = await mailcowFetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
