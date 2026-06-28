@@ -5,6 +5,11 @@ set -euo pipefail
 MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
 cd "${MAILCOW_DIR}"
 
+if [[ -z "${MAILCOW_HOSTNAME:-}" ]] && [[ -f mailcow.conf ]]; then
+  MAILCOW_HOSTNAME=$(grep '^MAILCOW_HOSTNAME=' mailcow.conf | cut -d= -f2- | tr -d '\r')
+fi
+export MAILCOW_HOSTNAME
+
 set_conf() {
   local key="$1"
   local value="$2"

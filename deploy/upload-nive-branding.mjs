@@ -16,6 +16,7 @@ const remoteDir = "/tmp/nive-branding";
 const remoteScript = "/tmp/apply-nive-branding.sh";
 const remoteEnsureMounts = "/tmp/ensure-sogo-theme-mounts.sh";
 const remoteRepair = "/tmp/repair-compose-override.sh";
+const remoteSyncApiKey = "/tmp/sync-api-key.sh";
 
 function collectFiles(dir, base = dir) {
   const entries = readdirSync(dir).filter((f) => !f.startsWith("."));
@@ -39,10 +40,19 @@ function patchBrandingScript(script) {
     .replace('BRANDING_DIR="${SCRIPT_DIR}/../branding"', `BRANDING_DIR="${remoteDir}"`)
     .replace('bash "${SCRIPT_DIR}/ensure-sogo-theme-mounts.sh"', `bash "${remoteEnsureMounts}"`)
     .replace('bash "${SCRIPT_DIR}/repair-compose-override.sh"', `bash ${remoteRepair}`)
-    .replace('bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"', "bash /tmp/configure-mailcow-routes.sh");
+    .replace('bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"', "bash /tmp/configure-mailcow-routes.sh")
+    .replace('bash "${SCRIPT_DIR}/sync-api-key.sh"', `bash "${remoteSyncApiKey}"`);
+}
+
+function writeSyncApiKeyScript() {
+  const syncPath = join(__dir, "sync-api-key.sh");
+  if (!existsSync(syncPath)) return;
+  writeExecutable(remoteSyncApiKey, readFileSync(syncPath, "utf8"));
+  console.log(`prepared ${remoteSyncApiKey}`);
 }
 
 function writeBrandingScripts() {
+  writeSyncApiKeyScript();
   writeExecutable(remoteEnsureMounts, readFileSync(ensureMountsPath, "utf8"));
   console.log(`prepared ${remoteEnsureMounts}`);
 
@@ -158,6 +168,15 @@ async function deploySsh() {
         s,
         "/tmp/configure-mailcow-routes.sh",
         normalizeScript(readFileSync(join(__dir, "configure-mailcow-routes.sh"), "utf8")),
+        0o755,
+      );
+    }
+
+    if (existsSync(join(__dir, "sync-api-key.sh"))) {
+      await writeFile(
+        s,
+        remoteSyncApiKey,
+        normalizeScript(readFileSync(join(__dir, "sync-api-key.sh"), "utf8")),
         0o755,
       );
     }

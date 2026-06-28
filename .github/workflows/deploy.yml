@@ -121,6 +121,7 @@ jobs:
           fi
 
           echo "==> Pos-deploy: sincronizar API Mailcow"
+          set -a && source .env.deploy && set +a
           bash sync-api-key.sh
         env:
           DEPLOY_MODE: local_vps

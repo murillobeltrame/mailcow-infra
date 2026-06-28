@@ -35,7 +35,9 @@ function collectFiles(dir, base = dir) {
 function patchSetupScript(script) {
   return script
     .replace('WEBMAIL_DIR="${SCRIPT_DIR}/../webmail"', `WEBMAIL_DIR="${remoteDir}"`)
-    .replace('bash "${SCRIPT_DIR}/repair-compose-override.sh"', "bash /tmp/repair-compose-override.sh");
+    .replace('bash "${SCRIPT_DIR}/repair-compose-override.sh"', "bash /tmp/repair-compose-override.sh")
+    .replace('bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"', "bash /tmp/configure-mailcow-routes.sh")
+    .replace('bash "${SCRIPT_DIR}/sync-api-key.sh"', "bash /tmp/sync-api-key.sh");
 }
 
 function writeDeployScripts() {
@@ -44,6 +46,7 @@ function writeDeployScripts() {
     [redirectScript, "redirect-webmail.sh", (s) => s],
     [join(__dir, "configure-mailcow-routes.sh"), "configure-mailcow-routes.sh", (s) => s],
     [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh", (s) => s],
+    [join(__dir, "sync-api-key.sh"), "sync-api-key.sh", (s) => s],
   ];
 
   for (const [local, name, patch] of scripts) {
@@ -142,6 +145,7 @@ async function deploySsh() {
       [redirectScript, "redirect-webmail.sh"],
       [join(__dir, "configure-mailcow-routes.sh"), "configure-mailcow-routes.sh"],
       [join(__dir, "repair-compose-override.sh"), "repair-compose-override.sh"],
+      [join(__dir, "sync-api-key.sh"), "sync-api-key.sh"],
     ]) {
       if (!existsSync(local)) continue;
       const script = readFileSync(local, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
