@@ -16,6 +16,9 @@ type InboxPanelProps = {
   onSearchSubmit: () => void;
   onSelect: (uid: number) => void;
   onRefresh: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 };
 
 export function InboxPanel({
@@ -29,6 +32,9 @@ export function InboxPanel({
   onSearchSubmit,
   onSelect,
   onRefresh,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: InboxPanelProps) {
   return (
     <section className="mail-surface flex w-full shrink-0 flex-col md:w-[340px] lg:w-[380px]">
@@ -97,6 +103,18 @@ export function InboxPanel({
                 onSelect={() => onSelect(msg.uid)}
               />
             ))}
+            {hasMore && onLoadMore && (
+              <div className="p-2">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl"
+                  disabled={loadingMore}
+                  onClick={onLoadMore}
+                >
+                  {loadingMore ? "Carregando…" : "Carregar mais"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

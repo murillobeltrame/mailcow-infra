@@ -1,8 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ApiError, api } from "@/lib/api";
 import { mailKeys } from "@/lib/query-keys";
+
+const PAGE_SIZE = 40;
 
 export function useMailbox() {
   const queryClient = useQueryClient();
@@ -17,11 +19,24 @@ export function useMailbox() {
     queryFn: () => api.folders().then((r) => r.folders),
   });
 
-  const messagesQuery = useQuery({
+  const messagesQuery = useInfiniteQuery({
     queryKey: mailKeys.messages(activeFolder, searchQuery),
-    queryFn: () => api.messages(activeFolder, 0, searchQuery || undefined).then((r) => r.messages),
+    queryFn: ({ pageParam = 0 }) =>
+      api.messages(activeFolder, pageParam, searchQuery || undefined).then((r) => ({
+        messages: r.messages,
+        total: r.total,
+        page: pageParam,
+      })),
+    initialPageParam: 0,
+    getNextPageParam: (last) =>
+      (last.page + 1) * PAGE_SIZE < last.total ? last.page + 1 : undefined,
     enabled: !!activeFolder,
   });
+
+  const messages = useMemo(
+    () => messagesQuery.data?.pages.flatMap((p) => p.messages) ?? [],
+    [messagesQuery.data],
+  );
 
   const messageQuery = useQuery({
     queryKey: mailKeys.message(activeFolder, selectedUid ?? 0),
@@ -32,7 +47,7 @@ export function useMailbox() {
 
   const activeFolderName = useMemo(
     () => foldersQuery.data?.find((f) => f.path === activeFolder)?.name ?? "Caixa de entrada",
-    [foldersQuery.data, activeFolder]
+    [foldersQuery.data, activeFolder],
   );
 
   const selectFolder = useCallback((path: string) => {
@@ -73,24 +88,55 @@ export function useMailbox() {
     }
   }, [queryClient]);
 
+  const invalidateMessages = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: mailKeys.messages(activeFolder, searchQuery) });
+    queryClient.invalidateQueries({ queryKey: mailKeys.folders });
+  }, [queryClient, activeFolder, searchQuery]);
+
   const deleteMutation = useMutation({
     mutationFn: (uid: number) => api.deleteMessages(activeFolder, [uid]),
     onSuccess: () => {
       toast.success("Mensagem excluída");
       setSelectedUid(null);
-      queryClient.invalidateQueries({ queryKey: mailKeys.messages(activeFolder, searchQuery) });
-      queryClient.invalidateQueries({ queryKey: mailKeys.folders });
+      invalidateMessages();
     },
     onError: (err) => {
       toast.error(err instanceof ApiError ? err.message : "Erro ao excluir");
     },
   });
 
+  const flagMutation = useMutation({
+    mutationFn: ({ uid, flagged }: { uid: number; flagged: boolean }) =>
+      api.toggleFlag(activeFolder, uid, flagged),
+    onSuccess: () => invalidateMessages(),
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao marcar"),
+  });
+
+  const unreadMutation = useMutation({
+    mutationFn: (uid: number) => api.markUnread(activeFolder, uid),
+    onSuccess: () => invalidateMessages(),
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro"),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: ({ uid, to }: { uid: number; to: string }) =>
+      api.moveMessages(activeFolder, to, [uid]),
+    onSuccess: () => {
+      toast.success("Mensagem movida");
+      setSelectedUid(null);
+      invalidateMessages();
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Erro ao mover"),
+  });
+
   return {
     folders: foldersQuery.data ?? [],
     foldersLoading: foldersQuery.isLoading,
-    messages: messagesQuery.data ?? [],
+    messages,
     messagesLoading: messagesQuery.isLoading,
+    messagesFetchingMore: messagesQuery.isFetchingNextPage,
+    hasMoreMessages: messagesQuery.hasNextPage,
+    loadMoreMessages: () => messagesQuery.fetchNextPage(),
     message: messageQuery.data ?? null,
     messageLoading: messageQuery.isPending,
     messageError: messageQuery.error,
@@ -106,6 +152,9 @@ export function useMailbox() {
     refreshAll,
     refreshing,
     deleteMessage: deleteMutation.mutate,
+    toggleFlag: flagMutation.mutate,
+    markUnread: unreadMutation.mutate,
+    moveMessage: moveMutation.mutate,
     isDeleting: deleteMutation.isPending,
     foldersError: foldersQuery.error,
     messagesError: messagesQuery.error,

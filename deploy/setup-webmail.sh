@@ -26,6 +26,9 @@ docker build -t nive-mail-web:latest "${WEBMAIL_DIR}"
 echo "==> Configurando docker-compose.override.yml..."
 bash "${SCRIPT_DIR}/repair-compose-override.sh"
 
+echo "==> Cutover rotas Mailcow → portal..."
+bash "${SCRIPT_DIR}/configure-mailcow-routes.sh"
+
 echo "==> Configurando nginx proxy /mail/ (site.nive-mail.custom)..."
 mkdir -p "$(dirname "${NGINX_CUSTOM}")"
 cat > "${NGINX_CUSTOM}" <<'NGINX'

@@ -328,12 +328,13 @@ async function appendToSentFolder(session: MailSession, raw: Buffer) {
 
 export async function sendMail(
   session: MailSession,
-  opts: { to: string; subject: string; body: string; cc?: string; replyTo?: string }
+  opts: { to: string; subject: string; body: string; cc?: string; bcc?: string; replyTo?: string }
 ) {
   const mailOptions: nodemailer.SendMailOptions = {
     from: session.name ? `"${session.name}" <${session.email}>` : session.email,
     to: opts.to,
     cc: opts.cc,
+    bcc: opts.bcc,
     replyTo: opts.replyTo,
     subject: opts.subject,
     text: opts.body,
@@ -381,6 +382,65 @@ export async function toggleFlag(session: MailSession, folder: string, uid: numb
     } else {
       await client.messageFlagsRemove({ uid }, ["\\Flagged"], { uid: true });
     }
+  } finally {
+    lock.release();
+    await client.logout();
+  }
+}
+
+export async function markUnread(session: MailSession, folder: string, uid: number) {
+  const client = createImapClient(session);
+  await client.connect();
+  const lock = await client.getMailboxLock(folder);
+  try {
+    await client.messageFlagsRemove({ uid }, ["\\Seen"], { uid: true });
+  } finally {
+    lock.release();
+    await client.logout();
+  }
+}
+
+export async function moveMessages(
+  session: MailSession,
+  fromFolder: string,
+  toFolder: string,
+  uids: number[],
+) {
+  const client = createImapClient(session);
+  await client.connect();
+  const lock = await client.getMailboxLock(fromFolder);
+  try {
+    await client.messageMove({ uid: uids.join(",") }, toFolder, { uid: true });
+  } finally {
+    lock.release();
+    await client.logout();
+  }
+}
+
+export async function getAttachment(
+  session: MailSession,
+  folder: string,
+  uid: number,
+  index: number,
+): Promise<{ filename: string; contentType: string; data: Buffer }> {
+  const client = createImapClient(session);
+  await client.connect();
+  const lock = await client.getMailboxLock(folder);
+  try {
+    const { content } = await client.download(String(uid), undefined, { uid: true });
+    const rawBuffer = await streamToBuffer(content);
+    const parsed = await simpleParser(rawBuffer);
+    const att = parsed.attachments?.[index];
+    if (!att) {
+      const err = new Error("Anexo não encontrado") as Error & { statusCode: number };
+      err.statusCode = 404;
+      throw err;
+    }
+    return {
+      filename: att.filename ?? "anexo",
+      contentType: att.contentType,
+      data: att.content,
+    };
   } finally {
     lock.release();
     await client.logout();

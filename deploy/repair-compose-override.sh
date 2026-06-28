@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Reconstrói docker-compose.override.yml válido (SOGo theme + SSO + webmail).
+# Reconstrói docker-compose.override.yml válido (SOGo theme + SSO + webmail portal).
 set -euo pipefail
 MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
 OVERRIDE="${MAILCOW_DIR}/docker-compose.override.yml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-cat > "${OVERRIDE}" <<'EOF'
-# Nive Mail — override unificado (SOGo theme, SSO Dovecot, webmail React)
+# Carrega MAILCOW_API_KEY do mailcow.conf se disponível
+MAILCOW_API_KEY="${MAILCOW_API_KEY:-}"
+if [[ -z "${MAILCOW_API_KEY}" && -f "${MAILCOW_DIR}/mailcow.conf" ]]; then
+  MAILCOW_API_KEY="$(grep '^API_KEY=' "${MAILCOW_DIR}/mailcow.conf" | cut -d= -f2- | tr -d '\r')"
+fi
+
+cat > "${OVERRIDE}" <<EOF
+# Nive Mail — override unificado (SOGo theme, SSO Dovecot, webmail React portal)
 services:
   sogo-mailcow:
     volumes:
@@ -31,7 +38,11 @@ services:
       - IMAP_PORT=993
       - SMTP_HOST=postfix-mailcow
       - SMTP_PORT=587
-      - COOKIE_SECRET=${NIVE_MAIL_COOKIE_SECRET:-change-me-in-production}
+      - SIEVE_HOST=dovecot-mailcow
+      - SIEVE_PORT=4190
+      - MAILCOW_API_URL=https://nginx-mailcow
+      - MAILCOW_API_KEY=${MAILCOW_API_KEY}
+      - COOKIE_SECRET=\${NIVE_MAIL_COOKIE_SECRET:-change-me-in-production}
     labels:
       - traefik.enable=false
 EOF

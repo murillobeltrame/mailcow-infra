@@ -8,9 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+export type ComposeMode = "new" | "reply" | "forward";
+
 export type ComposeDefaults = {
   to?: string;
   subject?: string;
+  body?: string;
+  mode?: ComposeMode;
 };
 
 type ComposeSheetProps = {
@@ -25,20 +29,44 @@ function buildReplySubject(subject: string) {
   return cleaned ? `Re: ${cleaned}` : "Re:";
 }
 
+function buildForwardSubject(subject: string) {
+  const cleaned = subject.replace(/^Fwd:\s*/i, "").replace(/^Fw:\s*/i, "").trim();
+  return cleaned ? `Fwd: ${cleaned}` : "Fwd:";
+}
+
 export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetProps) {
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
+
+  const mode = defaults?.mode ?? (defaults?.to ? "reply" : "new");
 
   useEffect(() => {
     if (!open) return;
-    setTo(defaults?.to ?? "");
-    setCc("");
-    setSubject(defaults?.subject ? buildReplySubject(defaults.subject) : "");
-    setBody("");
-  }, [open, defaults?.to, defaults?.subject]);
+    if (mode === "forward") {
+      setTo("");
+      setCc("");
+      setBcc("");
+      setSubject(defaults?.subject ? buildForwardSubject(defaults.subject) : "");
+      setBody(defaults?.body ?? "");
+    } else if (mode === "reply") {
+      setTo(defaults?.to ?? "");
+      setCc("");
+      setBcc("");
+      setSubject(defaults?.subject ? buildReplySubject(defaults.subject) : "");
+      setBody("");
+    } else {
+      setTo(defaults?.to ?? "");
+      setCc("");
+      setBcc("");
+      setSubject(defaults?.subject ?? "");
+      setBody(defaults?.body ?? "");
+    }
+  }, [open, defaults?.to, defaults?.subject, defaults?.body, mode]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +74,9 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  const title =
+    mode === "forward" ? "Encaminhar" : mode === "reply" ? "Responder" : "Nova mensagem";
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +86,13 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
     }
     setSending(true);
     try {
-      await api.send({ to: to.trim(), subject: subject.trim(), body, cc: cc.trim() || undefined });
+      await api.send({
+        to: to.trim(),
+        subject: subject.trim(),
+        body,
+        cc: cc.trim() || undefined,
+        bcc: bcc.trim() || undefined,
+      });
       toast.success("E-mail enviado");
       onClose();
       onSent?.();
@@ -79,7 +116,7 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
       <aside
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-border/60 bg-surface shadow-float animate-slide-in-right",
-          "sm:rounded-l-2xl"
+          "sm:rounded-l-2xl",
         )}
         role="dialog"
         aria-modal
@@ -88,7 +125,7 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
         <header className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-4">
           <div>
             <h2 id="compose-title" className="text-lg font-semibold">
-              Nova mensagem
+              {title}
             </h2>
             <p className="text-xs text-muted-foreground">Escreva e envie seu e-mail</p>
           </div>
@@ -107,6 +144,16 @@ export function ComposeSheet({ open, onClose, defaults, onSent }: ComposeSheetPr
               <Label htmlFor="compose-cc">Cc</Label>
               <Input id="compose-cc" type="email" value={cc} onChange={(e) => setCc(e.target.value)} placeholder="Opcional" />
             </div>
+            {showBcc ? (
+              <div className="space-y-2">
+                <Label htmlFor="compose-bcc">Cco</Label>
+                <Input id="compose-bcc" type="email" value={bcc} onChange={(e) => setBcc(e.target.value)} placeholder="Opcional" />
+              </div>
+            ) : (
+              <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setShowBcc(true)}>
+                Adicionar Cco
+              </button>
+            )}
             <div className="space-y-2">
               <Label htmlFor="compose-subject">Assunto</Label>
               <Input id="compose-subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />

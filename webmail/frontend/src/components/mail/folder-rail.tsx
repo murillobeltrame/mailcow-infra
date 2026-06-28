@@ -1,8 +1,8 @@
-import { LogOut, PenLine, Settings2 } from "lucide-react";
+import { PenLine, Settings2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { BrandMark } from "@/components/brand/brand-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getFolderIcon } from "@/lib/folder-icons";
-import { panelUrls } from "@/lib/panel-urls";
 import type { Folder } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -12,8 +12,6 @@ type FolderRailProps = {
   loading: boolean;
   onSelectFolder: (path: string) => void;
   onCompose: () => void;
-  onLogout: () => void;
-  loggingOut?: boolean;
   className?: string;
 };
 
@@ -23,15 +21,13 @@ export function FolderRail({
   loading,
   onSelectFolder,
   onCompose,
-  onLogout,
-  loggingOut = false,
   className,
 }: FolderRailProps) {
   return (
     <nav
       className={cn(
         "mail-surface flex w-16 shrink-0 flex-col items-center py-3 sm:w-[4.5rem]",
-        className
+        className,
       )}
       aria-label="Pastas"
     >
@@ -63,7 +59,7 @@ export function FolderRail({
                   "relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors",
                   active
                     ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
                 aria-current={active ? "page" : undefined}
                 aria-label={`${folder.name}${unseen ? `, ${unseen} não lidas` : ""}`}
@@ -80,27 +76,15 @@ export function FolderRail({
       </div>
 
       <div className="mt-2 flex flex-col items-center gap-1 border-t border-border/60 pt-3">
-        <a
-          href={panelUrls.user}
-          title="Painel da conta"
+        <Link
+          to="/account"
+          title="Minha conta"
           className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          aria-label="Painel da conta"
+          aria-label="Minha conta"
         >
           <Settings2 className="h-4 w-4" />
-        </a>
+        </Link>
         <ThemeToggle variant="ghost" className="h-10 w-10 rounded-xl" />
-        <button
-          type="button"
-          onClick={onLogout}
-          disabled={loggingOut}
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground",
-            loggingOut && "pointer-events-none opacity-50"
-          )}
-          aria-label="Sair"
-        >
-          <LogOut className={cn("h-4 w-4", loggingOut && "animate-pulse")} />
-        </button>
       </div>
     </nav>
   );

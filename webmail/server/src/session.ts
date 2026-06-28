@@ -1,29 +1,39 @@
 import { randomUUID } from "node:crypto";
 
-export type MailSession = {
+export type UserRole = "user" | "domainadmin" | "admin";
+
+export type PortalSession = {
   id: string;
-  email: string;
-  password: string;
+  role: UserRole;
+  /** E-mail ou username (ex.: admin) */
+  subject: string;
+  email?: string;
+  password?: string;
   name?: string;
+  /** Domínios permitidos (domainadmin) */
+  domains?: string[];
   expiresAt: number;
 };
 
-const sessions = new Map<string, MailSession>();
+/** @deprecated use PortalSession */
+export type MailSession = PortalSession & { email: string; password: string };
 
-export function createSession(email: string, password: string, name?: string, ttlMs = 8 * 60 * 60 * 1000) {
-  const id = randomUUID();
-  const session: MailSession = {
-    id,
-    email,
-    password,
-    name,
+const sessions = new Map<string, PortalSession>();
+
+export function createSession(
+  data: Omit<PortalSession, "id" | "expiresAt">,
+  ttlMs = 8 * 60 * 60 * 1000,
+): PortalSession {
+  const session: PortalSession = {
+    ...data,
+    id: randomUUID(),
     expiresAt: Date.now() + ttlMs,
   };
-  sessions.set(id, session);
+  sessions.set(session.id, session);
   return session;
 }
 
-export function getSession(id: string | undefined): MailSession | null {
+export function getSession(id: string | undefined): PortalSession | null {
   if (!id) return null;
   const session = sessions.get(id);
   if (!session) return null;
@@ -43,7 +53,11 @@ export function touchSession(id: string, ttlMs: number) {
   if (session) session.expiresAt = Date.now() + ttlMs;
 }
 
-// Limpa sessões expiradas a cada hora
+export function asMailSession(session: PortalSession): MailSession | null {
+  if (session.role !== "user" || !session.email || !session.password) return null;
+  return session as MailSession;
+}
+
 setInterval(() => {
   const now = Date.now();
   for (const [id, session] of sessions) {

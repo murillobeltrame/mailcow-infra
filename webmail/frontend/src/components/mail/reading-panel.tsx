@@ -1,28 +1,48 @@
-import { ArrowLeft, Mail, Paperclip, Reply, Trash2 } from "lucide-react";
+import DOMPurify from "dompurify";
+import { ArrowLeft, Forward, Mail, MailOpen, Paperclip, Reply, Star, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { MessageDetail } from "@/lib/api";
+import type { Folder, MessageDetail } from "@/lib/api";
+import { api } from "@/lib/api";
 import { initials } from "@/lib/utils";
 
 type ReadingPanelProps = {
   message: MessageDetail | null;
   loading: boolean;
   error?: Error | null;
+  folder: string;
+  folders?: Folder[];
   showBack?: boolean;
   onBack?: () => void;
   onReply: () => void;
+  onForward: () => void;
   onDelete: () => void;
+  onToggleFlag?: (flagged: boolean) => void;
+  onMarkUnread?: () => void;
+  onMove?: (targetFolder: string) => void;
 };
 
 export function ReadingPanel({
   message,
   loading,
   error,
+  folder,
+  folders = [],
   showBack,
   onBack,
   onReply,
+  onForward,
   onDelete,
+  onToggleFlag,
+  onMarkUnread,
+  onMove,
 }: ReadingPanelProps) {
+  const safeHtml = useMemo(
+    () => (message?.html ? DOMPurify.sanitize(message.html, { USE_PROFILES: { html: true } }) : ""),
+    [message?.html],
+  );
+
   if (loading) {
     return (
       <section className="mail-surface flex min-w-0 flex-1 flex-col p-6">
@@ -70,6 +90,7 @@ export function ReadingPanel({
   }
 
   const sender = message.fromName || message.from;
+  const moveTargets = folders.filter((f) => f.path !== folder);
 
   return (
     <section className="mail-surface flex min-w-0 flex-1 flex-col">
@@ -103,21 +124,57 @@ export function ReadingPanel({
               <p className="mt-1 truncate text-xs text-muted-foreground">Para: {message.to.join(", ")}</p>
             )}
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {onToggleFlag && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                onClick={() => onToggleFlag(!message.flagged)}
+                aria-label={message.flagged ? "Remover estrela" : "Marcar com estrela"}
+              >
+                <Star className={`h-4 w-4 ${message.flagged ? "fill-amber-400 text-amber-400" : ""}`} />
+              </Button>
+            )}
+            {onMarkUnread && (
+              <Button variant="outline" size="sm" className="rounded-xl" onClick={onMarkUnread}>
+                <MailOpen className="h-4 w-4" />
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="rounded-xl" onClick={onReply}>
               <Reply className="h-4 w-4" />
               Responder
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-xl" onClick={onForward}>
+              <Forward className="h-4 w-4" />
+              Encaminhar
             </Button>
             <Button variant="outline" size="sm" className="rounded-xl text-destructive hover:text-destructive" onClick={onDelete}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
+        {onMove && moveTargets.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">Mover para:</span>
+            {moveTargets.slice(0, 6).map((f) => (
+              <Button
+                key={f.path}
+                variant="ghost"
+                size="sm"
+                className="h-7 rounded-lg text-xs"
+                onClick={() => onMove(f.path)}
+              >
+                {f.name}
+              </Button>
+            ))}
+          </div>
+        )}
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin p-5 sm:p-6">
-        {message.html ? (
-          <div className="mail-body" dangerouslySetInnerHTML={{ __html: message.html }} />
+        {safeHtml ? (
+          <div className="mail-body" dangerouslySetInnerHTML={{ __html: safeHtml }} />
         ) : (
           <pre className="mail-body whitespace-pre-wrap font-sans">{message.text || ""}</pre>
         )}
@@ -126,17 +183,19 @@ export function ReadingPanel({
           <div className="mt-8 rounded-xl border border-border/60 bg-muted/40 p-4">
             <p className="mb-3 text-sm font-medium">Anexos ({message.attachments.length})</p>
             <div className="flex flex-wrap gap-2">
-              {message.attachments.map((a) => (
-                <div
-                  key={`${a.filename}-${a.size}`}
-                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface px-3 py-2 text-sm"
+              {message.attachments.map((a, index) => (
+                <a
+                  key={`${a.filename}-${a.size}-${index}`}
+                  href={api.attachmentUrl(folder, message.uid, index)}
+                  download={a.filename}
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface px-3 py-2 text-sm transition hover:bg-muted"
                 >
                   <Paperclip className="h-4 w-4 text-muted-foreground" />
                   <span className="max-w-[200px] truncate">{a.filename}</span>
                   <span className="text-xs text-muted-foreground">
                     {Math.max(1, Math.round(a.size / 1024))} KB
                   </span>
-                </div>
+                </a>
               ))}
             </div>
           </div>

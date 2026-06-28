@@ -144,6 +144,12 @@
     if (/\/Mail(\/|$)/i.test(path) || /#!\/Mail/i.test(hash)) {
       window.location.replace("/mail/");
     }
+    if (/\/Calendar(\/|$)/i.test(path) || /#!\/Calendar/i.test(hash)) {
+      window.location.replace("/mail/calendar");
+    }
+    if (/\/Contacts(\/|$)/i.test(path) || /#!\/Contacts/i.test(hash)) {
+      window.location.replace("/mail/contacts");
+    }
   }
 
   function applyUiFixes() {

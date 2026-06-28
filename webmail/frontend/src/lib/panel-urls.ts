@@ -1,13 +1,19 @@
-/** URLs do painel Mailcow (sessão PHP — login em /) */
+/** URLs do portal Nive Mail e legado Mailcow (FIDO2 / reset senha) */
 export const panelUrls = {
-  /** Login Mailcow — detecta admin, domainadmin ou usuário */
+  /** Login Mailcow PHP — FIDO2 e reset senha */
   login: "/",
   resetPassword: "/reset-password",
-  admin: "/admin",
+  /** Portal React (preferir estes) */
+  webmail: "/mail/",
+  account: "/mail/account",
+  admin: "/mail/admin",
+  domain: "/mail/domain",
+  calendar: "/mail/calendar",
+  contacts: "/mail/contacts",
+  /** Legado (nginx redireciona para portal) */
   user: "/user",
   domainAdmin: "/domainadmin",
   sogo: "/SOGo/",
-  webmail: "/mail/",
 } as const;
 
 export type PanelLink = {
@@ -15,6 +21,7 @@ export type PanelLink = {
   title: string;
   description: string;
   href: string;
+  internal?: boolean;
   badge?: string;
 };
 
@@ -23,20 +30,23 @@ export const panelLinks: PanelLink[] = [
     id: "admin",
     title: "Administração",
     description: "Caixas, domínios, filas, RAM, disco e configuração do servidor.",
-    href: panelUrls.login,
+    href: panelUrls.admin,
+    internal: true,
     badge: "Admin",
   },
   {
     id: "user",
     title: "Minha conta",
-    description: "Senha, app passwords, filtros, calendário e atalho para o webmail.",
-    href: panelUrls.login,
+    description: "Senha, app passwords, filtros Sieve e preferências.",
+    href: panelUrls.account,
+    internal: true,
     badge: "Usuário",
   },
   {
     id: "sogo",
     title: "Calendário e contactos",
-    description: "Agenda e livro de endereços (SOGo).",
-    href: panelUrls.sogo,
+    description: "Agenda e livro de endereços no portal Nive.",
+    href: panelUrls.calendar,
+    internal: true,
   },
 ];

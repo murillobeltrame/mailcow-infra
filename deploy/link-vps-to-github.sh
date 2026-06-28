@@ -26,4 +26,5 @@ git reset --hard "origin/$BRANCH"
 
 chmod +x deploy/deploy-on-vps.sh deploy/*.sh 2>/dev/null || true
 echo "OK — $APP_DIR ligado ao GitHub ($BRANCH)."
-echo "Próximo: configure deploy/.env.deploy e registre o runner self-hosted (label vps-hostinger)."
+echo "Próximo: registre o runner self-hosted:"
+echo "  RUNNER_TOKEN=<token do GitHub> bash deploy/setup-github-runner.sh"

@@ -1,7 +1,9 @@
 /**
- * Login FIDO2/WebAuthn — mesma lógica do Mailcow UI (data/web templates + footer JS).
- * O POST de verificação vai para / (PHP Mailcow), não para /mail/.
+ * Login FIDO2/WebAuthn — validação Mailcow PHP, sessão portal Nive Mail.
  */
+
+import type { User } from "@/lib/api";
+import { api } from "@/lib/api";
 
 const MAILCOW_LOGIN_URL = "/";
 
@@ -42,12 +44,27 @@ function supportsWebAuthn(): boolean {
   return typeof window.fetch === "function" && typeof navigator.credentials?.get === "function";
 }
 
-export async function loginWithFido2(): Promise<void> {
+/** Extrai username da resposta Mailcow ou cookie após FIDO2. */
+async function resolveFido2Subject(): Promise<string> {
+  const meRes = await fetch("/api/v1/get/me", { credentials: "include", cache: "no-cache" });
+  if (meRes.ok) {
+    const me = (await meRes.json()) as { username?: string; email?: string };
+    if (me.username) return me.username;
+    if (me.email) return me.email;
+  }
+  return "user@local";
+}
+
+export async function loginWithFido2(): Promise<User> {
   if (!supportsWebAuthn()) {
     throw new Error("Seu navegador não suporta FIDO2/WebAuthn.");
   }
 
-  const argsRes = await fetch("/api/v1/get/fido2-get-args", { method: "GET", cache: "no-cache", credentials: "include" });
+  const argsRes = await fetch("/api/v1/get/fido2-get-args", {
+    method: "GET",
+    cache: "no-cache",
+    credentials: "include",
+  });
   const argsJson = (await argsRes.json()) as { success?: boolean };
   if (argsJson.success === false) {
     throw new Error("Nenhuma chave FIDO2 registrada ou serviço indisponível.");
@@ -71,12 +88,17 @@ export async function loginWithFido2(): Promise<void> {
   formData.append("token", token);
   formData.append("verify_fido2_login", "true");
 
-  await fetch(MAILCOW_LOGIN_URL, {
+  const verifyRes = await fetch(MAILCOW_LOGIN_URL, {
     method: "POST",
     body: formData,
     cache: "no-cache",
     credentials: "include",
   });
 
-  window.location.href = MAILCOW_LOGIN_URL;
+  if (!verifyRes.ok && verifyRes.status !== 302) {
+    throw new Error("Verificação FIDO2 falhou.");
+  }
+
+  const subject = await resolveFido2Subject();
+  return api.fido2Session(subject, subject === "admin" ? "admin" : "user");
 }

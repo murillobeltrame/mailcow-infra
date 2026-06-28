@@ -1,57 +1,50 @@
 import { Menu, PenLine } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useAuth } from "@/auth/auth-context";
-import { ComposeSheet } from "@/components/mail/compose-sheet";
+import { useState } from "react";
+import { ComposeSheet, type ComposeDefaults } from "@/components/mail/compose-sheet";
 import { FolderRail } from "@/components/mail/folder-rail";
 import { InboxPanel } from "@/components/mail/inbox-panel";
 import { ReadingPanel } from "@/components/mail/reading-panel";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/auth/auth-context";
 import { useMailbox } from "@/hooks/use-mailbox";
 import { cn } from "@/lib/utils";
 
 export function MailApp() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const mailbox = useMailbox();
   const [composeOpen, setComposeOpen] = useState(false);
-  const [replyMode, setReplyMode] = useState(false);
+  const [composeDefaults, setComposeDefaults] = useState<ComposeDefaults | undefined>();
   const [foldersOpen, setFoldersOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  const composeDefaults = useMemo(() => {
-    if (!replyMode || !mailbox.message) return undefined;
-    return { to: mailbox.message.from, subject: mailbox.message.subject };
-  }, [replyMode, mailbox.message]);
 
   if (!user) return null;
 
   const openCompose = () => {
-    setReplyMode(false);
+    setComposeDefaults(undefined);
     setComposeOpen(true);
   };
 
   const openReply = () => {
-    setReplyMode(true);
+    if (!mailbox.message) return;
+    setComposeDefaults({
+      to: mailbox.message.from,
+      subject: mailbox.message.subject,
+      mode: "reply",
+    });
+    setComposeOpen(true);
+  };
+
+  const openForward = () => {
+    if (!mailbox.message) return;
+    const quoted = mailbox.message.text ?? mailbox.message.html?.replace(/<[^>]+>/g, "") ?? "";
+    setComposeDefaults({
+      subject: mailbox.message.subject,
+      body: `\n\n---------- Mensagem encaminhada ----------\nDe: ${mailbox.message.from}\nAssunto: ${mailbox.message.subject}\n\n${quoted}`,
+      mode: "forward",
+    });
     setComposeOpen(true);
   };
 
   const closeCompose = () => setComposeOpen(false);
-
-  const handleLogout = async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      await logout();
-      toast.success("Sessão encerrada");
-      navigate("/login", { replace: true });
-    } catch {
-      toast.error("Não foi possível sair");
-    } finally {
-      setLoggingOut(false);
-    }
-  };
 
   const selectFolder = (path: string) => {
     mailbox.selectFolder(path);
@@ -61,8 +54,7 @@ export function MailApp() {
   const showingMessage = mailbox.selectedUid !== null;
 
   return (
-    <div className="mail-shell">
-      {/* Barra mobile */}
+    <div className="mail-shell p-2 md:p-4">
       <header className="mb-2 flex shrink-0 items-center gap-2 md:hidden">
         <Button
           variant="outline"
@@ -83,7 +75,6 @@ export function MailApp() {
       </header>
 
       <div className="mail-workspace">
-        {/* Rail desktop */}
         <FolderRail
           className="hidden md:flex"
           folders={mailbox.folders}
@@ -91,11 +82,8 @@ export function MailApp() {
           loading={mailbox.foldersLoading}
           onSelectFolder={mailbox.selectFolder}
           onCompose={openCompose}
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
-        {/* Drawer mobile — pastas */}
         {foldersOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
             <button
@@ -114,15 +102,12 @@ export function MailApp() {
                   openCompose();
                   setFoldersOpen(false);
                 }}
-                onLogout={handleLogout}
-                loggingOut={loggingOut}
                 className="h-full rounded-none rounded-r-2xl"
               />
             </div>
           </div>
         )}
 
-        {/* Conteúdo principal */}
         <div className="flex min-h-0 min-w-0 flex-1 gap-2 sm:gap-3">
           <div className={cn("flex min-h-0 min-w-0 flex-1 gap-2 sm:gap-3", showingMessage && "max-md:hidden")}>
             <InboxPanel
@@ -136,30 +121,56 @@ export function MailApp() {
               onSelect={mailbox.setSelectedUid}
               onRefresh={mailbox.refresh}
               refreshing={mailbox.refreshing}
+              hasMore={mailbox.hasMoreMessages}
+              loadingMore={mailbox.messagesFetchingMore}
+              onLoadMore={mailbox.loadMoreMessages}
             />
             <ReadingPanel
               message={mailbox.message}
               loading={mailbox.messageLoading && showingMessage}
               error={mailbox.messageError}
+              folder={mailbox.activeFolder}
+              folders={mailbox.folders}
               onReply={openReply}
+              onForward={openForward}
               onDelete={() => {
                 if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
+              }}
+              onToggleFlag={(flagged) => {
+                if (mailbox.selectedUid !== null) mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
+              }}
+              onMarkUnread={() => {
+                if (mailbox.selectedUid !== null) mailbox.markUnread(mailbox.selectedUid);
+              }}
+              onMove={(to) => {
+                if (mailbox.selectedUid !== null) mailbox.moveMessage({ uid: mailbox.selectedUid, to });
               }}
             />
           </div>
 
-          {/* Mobile — leitura fullscreen */}
           {showingMessage && (
             <div className="flex min-h-0 min-w-0 flex-1 md:hidden">
               <ReadingPanel
                 message={mailbox.message}
                 loading={mailbox.messageLoading}
                 error={mailbox.messageError}
+                folder={mailbox.activeFolder}
+                folders={mailbox.folders}
                 showBack
                 onBack={() => mailbox.setSelectedUid(null)}
                 onReply={openReply}
+                onForward={openForward}
                 onDelete={() => {
                   if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
+                }}
+                onToggleFlag={(flagged) => {
+                  if (mailbox.selectedUid !== null) mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
+                }}
+                onMarkUnread={() => {
+                  if (mailbox.selectedUid !== null) mailbox.markUnread(mailbox.selectedUid);
+                }}
+                onMove={(to) => {
+                  if (mailbox.selectedUid !== null) mailbox.moveMessage({ uid: mailbox.selectedUid, to });
                 }}
               />
             </div>
@@ -167,12 +178,7 @@ export function MailApp() {
         </div>
       </div>
 
-      <ComposeSheet
-        open={composeOpen}
-        onClose={closeCompose}
-        defaults={composeDefaults}
-        onSent={mailbox.refreshAll}
-      />
+      <ComposeSheet open={composeOpen} onClose={closeCompose} defaults={composeDefaults} onSent={mailbox.refreshAll} />
     </div>
   );
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Rotas Mailcow: webmail em /mail/, painel preservado (/user, /admin, SOGo calendário).
+# Rotas Mailcow: portal Nive Mail em /mail/ com cutover dos painéis PHP legados.
 set -euo pipefail
 MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
 cd "${MAILCOW_DIR}"
 
-echo "==> Restaurando pós-login do painel (/user, /admin, /domainadmin)..."
+echo "==> Cutover portal: /user, /admin, /domainadmin → /mail/ ..."
 
 python3 - <<'PY'
 import re
@@ -25,48 +25,46 @@ def patch_file(path: Path, replacements: list[tuple[str, str]]) -> bool:
         return True
     return False
 
-# index.php — usuário autenticado vai ao painel, não ao webmail
+# index.php — após login mailbox → webmail portal (minha conta integrada)
 index = root / "index.php"
 if index.exists():
     t = index.read_text()
-    t_new = t.replace(
-        'header("Location: /mail/");',
-        'header("Location: /user");',
-    )
-    # Garante bloco user (upstream usa SOGo/so/ — painel primeiro)
-    t_new = re.sub(
-        r'header\("Location: /SOGo/so/"\);',
-        'header("Location: /user");',
-        t_new,
-    )
-    if t_new != t:
-        index.write_text(t_new)
+    for old, new in [
+        ('header("Location: /user");', 'header("Location: /mail/");'),
+        ('header("Location: /SOGo/so/");', 'header("Location: /mail/");'),
+    ]:
+        t = t.replace(old, new)
+    if t != index.read_text():
+        index.write_text(t)
         print("    data/web/index.php")
 
-# triggers.user.inc.php — após login de mailbox → /user
 patch_file(
     root / "inc/triggers.user.inc.php",
     [
-        ('header("Location: /mail/");', 'header("Location: /user");'),
-        ('header("Location: /SOGo/so/");', 'header("Location: /user");'),
+        ('header("Location: /user");', 'header("Location: /mail/");'),
+        ('header("Location: /SOGo/so/");', 'header("Location: /mail/");'),
     ],
 )
 
-# triggers.global.inc.php — se existir redirect para mail
+# Admin / domainadmin triggers → portal
 patch_file(
-    root / "inc/triggers.global.inc.php",
+    root / "inc/triggers.admin.inc.php",
     [
-        ('header("Location: /mail/");', 'header("Location: /user");'),
+        ('header("Location: /admin");', 'header("Location: /mail/admin");'),
+    ],
+)
+patch_file(
+    root / "inc/triggers.domainadmin.inc.php",
+    [
+        ('header("Location: /domainadmin");', 'header("Location: /mail/domain");'),
     ],
 )
 
-# sogo-auth.php — SSO para calendário/contactos (não webmail)
+# sogo-auth.php — calendário/contactos permanecem em SOGo
 sogo_auth = root / "sogo-auth.php"
 if sogo_auth.exists():
     t = sogo_auth.read_text()
     t_new = t.replace('header("Location: /mail/");', 'header("Location: /SOGo/so/");')
-    if 'header("Location: /SOGo/so/");' not in t_new and 'header("Location: /mail/");' in t:
-        pass
     if t_new != t:
         sogo_auth.write_text(t_new)
         print("    data/web/sogo-auth.php")
@@ -82,12 +80,38 @@ if [[ -f "${TWIG}" ]]; then
   sed -i 's|href="/SOGo/so"|href="/mail/"|g' "${TWIG}"
 fi
 
-echo "==> Nginx: módulo Mail do SOGo → /mail/ (webmail moderno)..."
+echo "==> Nginx: redirects painéis legados + SOGo Mail → portal ..."
 mkdir -p data/conf/nginx
 cat > data/conf/nginx/site.nive-mail-redirects.custom <<'NGINX'
+# Portal Nive Mail — cutover painéis PHP e SOGo Mail
+location = /user {
+    return 302 /mail/account;
+}
+location ^~ /user/ {
+    return 302 /mail/account;
+}
+location = /admin {
+    return 302 /mail/admin;
+}
+location ^~ /admin/ {
+    return 302 /mail/admin;
+}
+location = /domainadmin {
+    return 302 /mail/domain;
+}
+location ^~ /domainadmin/ {
+    return 302 /mail/domain;
+}
 # SOGo Mail legado → webmail React; calendário/contactos permanecem em /SOGo/
 location ~ ^/SOGo/so/[^/]+/Mail(/|$) {
     return 302 /mail/;
+}
+# Calendário SOGo → portal quando estável
+location ~ ^/SOGo/so/[^/]+/Calendar(/|$) {
+    return 302 /mail/calendar;
+}
+location ~ ^/SOGo/so/[^/]+/Contacts(/|$) {
+    return 302 /mail/contacts;
 }
 NGINX
 
@@ -98,8 +122,10 @@ docker compose restart php-fpm-mailcow nginx-mailcow 2>/dev/null || \
   docker-compose restart php-fpm-mailcow nginx-mailcow 2>/dev/null || true
 
 echo ""
-echo "Rotas configuradas:"
-echo "  Webmail (ler/enviar):  https://mail.nivesistemas.com.br/mail/"
-echo "  Painel usuário:        https://mail.nivesistemas.com.br/user"
-echo "  Admin (RAM, caixas):   https://mail.nivesistemas.com.br/admin"
-echo "  Login Mailcow:         https://mail.nivesistemas.com.br/"
+echo "Rotas configuradas (portal unificado):"
+echo "  Webmail:               https://mail.nivesistemas.com.br/mail/"
+echo "  Minha conta:           https://mail.nivesistemas.com.br/mail/account"
+echo "  Admin global:          https://mail.nivesistemas.com.br/mail/admin"
+echo "  Admin de domínio:      https://mail.nivesistemas.com.br/mail/domain"
+echo "  Calendário/contactos:  https://mail.nivesistemas.com.br/mail/calendar | /contacts"
+echo "  Login Mailcow (FIDO2): https://mail.nivesistemas.com.br/"

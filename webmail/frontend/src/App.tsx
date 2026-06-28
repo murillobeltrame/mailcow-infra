@@ -1,22 +1,14 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import { useAuth } from "@/auth/auth-context";
-import { PageLoader } from "@/components/layout/page-loader";
+import { AppShell } from "@/components/portal/app-shell";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AccountPage } from "@/pages/account-page";
+import { AdminPage } from "@/pages/admin-page";
+import { CalendarPage } from "@/pages/calendar-page";
+import { ContactsPage } from "@/pages/contacts-page";
+import { DomainPage } from "@/pages/domain-page";
+import { GuestRoute } from "@/components/auth/protected-route";
 import { LoginPage } from "@/pages/login-page";
 import { MailboxPage } from "@/pages/mailbox-page";
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <PageLoader />;
-  if (!user) return <Navigate to="/login" replace />;
-  return children;
-}
-
-function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <PageLoader />;
-  if (user) return <Navigate to="/" replace />;
-  return children;
-}
+import { Navigate, Route, Routes } from "react-router-dom";
 
 export function AppRoutes() {
   return (
@@ -30,13 +22,61 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/"
         element={
           <ProtectedRoute>
-            <MailboxPage />
+            <AppShell />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <MailboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <AccountPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <ContactsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/domain"
+          element={
+            <ProtectedRoute roles={["domainadmin", "admin"]}>
+              <DomainPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

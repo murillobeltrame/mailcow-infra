@@ -1,3 +1,5 @@
+import type { UserRole } from "./roles";
+
 export class ApiError extends Error {
   status: number;
 
@@ -29,7 +31,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export type User = { email: string; name?: string };
+export type User = {
+  email: string;
+  name?: string;
+  role: UserRole;
+  subject: string;
+  domains?: string[];
+};
 
 export type Folder = {
   path: string;
@@ -59,10 +67,16 @@ export type MessageDetail = MessageSummary & {
 };
 
 export const api = {
-  login(email: string, password: string) {
+  login(login: string, password: string) {
     return request<User>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ login, password }),
+    });
+  },
+  fido2Session(subject: string, role?: UserRole) {
+    return request<User>("/api/auth/fido2-session", {
+      method: "POST",
+      body: JSON.stringify({ subject, role }),
     });
   },
   logout() {
@@ -82,7 +96,10 @@ export const api = {
   message(folder: string, uid: number) {
     return request<MessageDetail>(`/api/messages/${uid}?folder=${encodeURIComponent(folder)}`);
   },
-  send(data: { to: string; subject: string; body: string; cc?: string }) {
+  attachmentUrl(folder: string, uid: number, index: number) {
+    return apiUrl(`/api/messages/${uid}/attachments/${index}?folder=${encodeURIComponent(folder)}`);
+  },
+  send(data: { to: string; subject: string; body: string; cc?: string; bcc?: string }) {
     return request<{ ok: boolean }>("/api/messages/send", {
       method: "POST",
       body: JSON.stringify(data),
@@ -99,5 +116,70 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ folder, flagged }),
     });
+  },
+  markUnread(folder: string, uid: number) {
+    return request<{ ok: boolean }>(`/api/messages/${uid}/unread`, {
+      method: "PATCH",
+      body: JSON.stringify({ folder }),
+    });
+  },
+  moveMessages(from: string, to: string, uids: number[]) {
+    return request<{ ok: boolean }>("/api/messages/move", {
+      method: "POST",
+      body: JSON.stringify({ from, to, uids }),
+    });
+  },
+  hostStatus() {
+    return request<Record<string, unknown>>("/api/admin/status/host");
+  },
+  adminDomains() {
+    return request<{ domains: unknown[] }>("/api/admin/domains");
+  },
+  adminMailboxes(domain?: string) {
+    const q = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+    return request<{ mailboxes: unknown[] }>(`/api/admin/mailboxes${q}`);
+  },
+  domainMailboxes(domain: string) {
+    return request<{ mailboxes: unknown[] }>(`/api/domain/mailboxes?domain=${encodeURIComponent(domain)}`);
+  },
+  changePassword(password: string, password2?: string) {
+    return request<{ ok: boolean }>("/api/account/password", {
+      method: "POST",
+      body: JSON.stringify({ password, password2: password2 ?? password }),
+    });
+  },
+  appPasswords() {
+    return request<{ items: unknown[] }>("/api/account/app-passwords");
+  },
+  addAppPassword(app_name: string, app_passwd: string) {
+    return request<{ ok: boolean }>("/api/account/app-passwords", {
+      method: "POST",
+      body: JSON.stringify({ app_name, app_passwd, app_passwd2: app_passwd }),
+    });
+  },
+  sieve() {
+    return request<{ scripts: { name: string; active: boolean }[]; active: string }>("/api/account/sieve");
+  },
+  saveSieve(name: string, content: string) {
+    return request<{ ok: boolean }>("/api/account/sieve", {
+      method: "PUT",
+      body: JSON.stringify({ name, content }),
+    });
+  },
+  calendars() {
+    return request<{ calendars: { href: string; name: string }[] }>("/api/calendar/calendars");
+  },
+  calendarEvents(href: string) {
+    return request<{ events: { summary: string; raw: string }[] }>(
+      `/api/calendar/events?href=${encodeURIComponent(href)}`,
+    );
+  },
+  contactBooks() {
+    return request<{ books: { href: string; name: string }[] }>("/api/contacts/books");
+  },
+  contacts(href: string) {
+    return request<{ contacts: { fn: string; email?: string }[] }>(
+      `/api/contacts/list?href=${encodeURIComponent(href)}`,
+    );
   },
 };

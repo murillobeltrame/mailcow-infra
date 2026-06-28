@@ -6,6 +6,7 @@ export type AuthContextValue = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  establishSession: (user: User) => void;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

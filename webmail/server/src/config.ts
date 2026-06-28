@@ -15,13 +15,17 @@ export const config = {
   smtpPort: parseInt(process.env.SMTP_PORT ?? "587", 10),
   smtpSecure: process.env.SMTP_SECURE === "true",
   smtpTlsServername: process.env.SMTP_TLS_SERVERNAME ?? "mail.nivesistemas.com.br",
+  sieveHost: process.env.SIEVE_HOST ?? "dovecot-mailcow",
+  sievePort: parseInt(process.env.SIEVE_PORT ?? "4190", 10),
   sessionTtlMs: parseInt(process.env.SESSION_TTL_MS ?? String(8 * 60 * 60 * 1000), 10),
   cookieSecret: process.env.COOKIE_SECRET ?? "nive-mail-dev-secret-change-in-production",
   frontendDist: process.env.FRONTEND_DIST ?? path.resolve(__dirname, "../../frontend/dist"),
   basePath: process.env.BASE_PATH ?? "/mail",
+  mailcowApiUrl: (process.env.MAILCOW_API_URL ?? "https://nginx-mailcow").replace(/\/$/, ""),
+  mailcowApiKey: process.env.MAILCOW_API_KEY ?? "",
+  mailcowHostname: process.env.MAILCOW_HOSTNAME ?? "mail.nivesistemas.com.br",
 };
 
-/** TLS para IMAP/SMTP internos Docker (cert emitido para o hostname público). */
 export const mailTlsOptions = {
   rejectUnauthorized: config.imapTlsRejectUnauthorized,
   servername: config.imapTlsServername,

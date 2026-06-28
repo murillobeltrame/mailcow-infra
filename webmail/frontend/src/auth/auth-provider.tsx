@@ -1,12 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "./auth-context";
 import { api } from "@/lib/api";
 import type { User } from "@/lib/api";
+import { defaultRouteForRole } from "@/lib/roles";
 import { mailKeys } from "@/lib/query-keys";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,10 +21,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const u = await api.login(email, password);
-    setUser(u);
-  }, []);
+  const login = useCallback(
+    async (loginId: string, password: string) => {
+      const u = await api.login(loginId, password);
+      setUser(u);
+      navigate(defaultRouteForRole(u.role), { replace: true });
+    },
+    [navigate],
+  );
+
+  const establishSession = useCallback(
+    (u: User) => {
+      setUser(u);
+      navigate(defaultRouteForRole(u.role), { replace: true });
+    },
+    [navigate],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -34,7 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [queryClient]);
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
+  const value = useMemo(
+    () => ({ user, loading, login, logout, establishSession }),
+    [user, loading, login, logout, establishSession],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
