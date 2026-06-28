@@ -20,6 +20,7 @@ export function ContactsPage() {
   });
 
   const books = asArray<{ href: string; name: string }>(booksQuery.data);
+  const contacts = asArray<{ fn: string; email?: string }>(contactsQuery.data);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -58,13 +59,13 @@ export function ContactsPage() {
               <Skeleton className="h-48 w-full" />
             ) : (
               <ul className="divide-y divide-border/60">
-                {asArray(contactsQuery.data).map((c, i) => (
+                {contacts.map((c, i) => (
                   <li key={i} className="flex items-center justify-between py-3">
                     <span className="font-medium">{c.fn || "—"}</span>
                     <span className="text-sm text-muted-foreground">{c.email ?? ""}</span>
                   </li>
                 ))}
-                {asArray(contactsQuery.data).length === 0 && (
+                {contacts.length === 0 && (
                   <p className="py-4 text-sm text-muted-foreground">Nenhum contacto</p>
                 )}
               </ul>
