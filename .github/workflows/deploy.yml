@@ -122,7 +122,7 @@ jobs:
 
           echo "==> Pos-deploy: sincronizar API Mailcow"
           set -a && source .env.deploy && set +a
-          SYNC_API_STRICT=1 bash sync-api-key.sh
+          SYNC_API_STRICT=1 SYNC_API_VERIFY_BFF=1 bash sync-api-key.sh
         env:
           DEPLOY_MODE: local_vps
           DEPLOY_DKIM_WAIT_SEC: ${{ vars.DEPLOY_DKIM_WAIT_SEC || '120' }}

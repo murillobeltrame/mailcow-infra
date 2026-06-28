@@ -41,31 +41,43 @@ VALUES ('${KEY}', 1, '${ALLOW}', 'rw', 1);
 
 HOST="${MAILCOW_HOSTNAME:?}"
 STRICT="${SYNC_API_STRICT:-0}"
+VERIFY_BFF="${SYNC_API_VERIFY_BFF:-${STRICT}}"
 TRIES="${SYNC_API_RETRIES:-12}"
 SLEEP="${SYNC_API_SLEEP:-5}"
 
-api_ready=false
-for ((i=1; i<=TRIES; i++)); do
+if [[ "${VERIFY_BFF}" = "1" || "${STRICT}" = "1" ]]; then
+  api_ready=false
+  for ((i=1; i<=TRIES; i++)); do
+    VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
+      -H "Host: ${HOST}" \
+      -H "X-API-Key: ${KEY}" 2>/dev/null || true)
+    if echo "${VER}" | grep -q '"version"'; then
+      echo "API OK: ${VER}"
+      api_ready=true
+      break
+    fi
+    echo "Aguardando API Mailcow (${i}/${TRIES})..."
+    sleep "${SLEEP}"
+  done
+
+  if [[ "${api_ready}" != true ]]; then
+    echo "AVISO: API Mailcow ainda nao respondeu (nginx/php reiniciando?)" >&2
+    if [[ "${STRICT}" = "1" ]]; then
+      exit 1
+    fi
+  fi
+else
   VER=$(curl -sk "https://127.0.0.1/api/v1/get/status/version" \
     -H "Host: ${HOST}" \
     -H "X-API-Key: ${KEY}" 2>/dev/null || true)
   if echo "${VER}" | grep -q '"version"'; then
     echo "API OK: ${VER}"
-    api_ready=true
-    break
-  fi
-  echo "Aguardando API Mailcow (${i}/${TRIES})..."
-  sleep "${SLEEP}"
-done
-
-if [[ "${api_ready}" != true ]]; then
-  echo "AVISO: API Mailcow ainda nao respondeu (nginx/php reiniciando?)" >&2
-  if [[ "${STRICT}" = "1" ]]; then
-    exit 1
+  else
+    echo "API key sincronizada (verificacao completa no pos-deploy)"
   fi
 fi
 
-if docker ps --format '{{.Names}}' | grep -q '^nive-mail-web$'; then
+if [[ "${VERIFY_BFF}" = "1" ]] && docker ps --format '{{.Names}}' | grep -q '^nive-mail-web$'; then
   bff_ok=false
   for ((i=1; i<=TRIES; i++)); do
     if docker exec nive-mail-web node --input-type=module -e "

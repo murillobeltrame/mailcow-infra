@@ -121,10 +121,6 @@ rm -rf data/web/templates/cache/* 2>/dev/null || true
 docker compose restart php-fpm-mailcow nginx-mailcow 2>/dev/null || \
   docker-compose restart php-fpm-mailcow nginx-mailcow 2>/dev/null || true
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "==> Sincronizando API key (rede Docker + skip_ip_check)..."
-bash "${SCRIPT_DIR}/sync-api-key.sh"
-
 echo ""
 echo "Rotas configuradas (portal unificado):"
 echo "  Webmail:               https://mail.nivesistemas.com.br/mail/"
