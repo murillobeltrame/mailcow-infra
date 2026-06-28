@@ -22,7 +22,7 @@ function authError(message: string, statusCode = 401): Error & { statusCode: num
  * Admin/domainadmin validam senha BLF-CRYPT no MySQL (nginx redireciona POST /admin/ → portal).
  * - user: caixa IMAP (e-mail completo)
  * - admin: tabela admin
- * - domainadmin: tabela domain_admins + da_acl
+ * - domainadmin: senha na tabela admin (superadmin=0) + domínios em domain_admins
  */
 export async function authenticateLogin(
   login: string,

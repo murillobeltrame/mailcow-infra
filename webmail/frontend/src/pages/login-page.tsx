@@ -34,7 +34,7 @@ const modeLabels: Record<LoginMode, { title: string; hint: string; loginLabel: s
   },
   domainadmin: {
     title: "Administrador de domínio",
-    hint: "Gerencie caixas e aliases do seu domínio",
+    hint: "Conta criada no Mailcow (System → Domain administrators). Não use o usuário admin global.",
     loginLabel: "Usuário ou e-mail",
     loginType: "text",
   },
@@ -142,7 +142,7 @@ export function LoginPage() {
                         className="rounded-xl pl-10"
                         value={loginId}
                         onChange={(e) => setLoginId(e.target.value)}
-                        placeholder={mode === "user" ? "voce@empresa.com.br" : mode === "admin" ? "admin" : "admin@dominio.com.br"}
+                        placeholder={mode === "user" ? "voce@empresa.com.br" : mode === "admin" ? "admin" : "gestor@nivesistemas.com.br"}
                         required={mode !== "admin"}
                         autoComplete="username"
                       />
