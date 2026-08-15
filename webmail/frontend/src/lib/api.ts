@@ -194,9 +194,10 @@ export const api = {
   folders() {
     return request<{ folders: Folder[] }>("/api/folders");
   },
-  messages(folder: string, page = 0, q?: string) {
+  messages(folder: string, page = 0, q?: string, status?: "seen" | "unseen") {
     const params = new URLSearchParams({ folder, page: String(page) });
     if (q) params.set("q", q);
+    if (status) params.set("status", status);
     return request<{ messages: MessageSummary[]; total: number }>(`/api/messages?${params}`);
   },
   message(folder: string, uid: number) {

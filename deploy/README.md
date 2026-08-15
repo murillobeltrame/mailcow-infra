@@ -146,7 +146,7 @@ Com runner self-hosted, `VPS_SSH_PASS` **não é obrigatório** (deploy roda loc
 
 ## Solução de problemas
 
-**Workflow em fila / runner offline:** Settings → Actions → Runners → confirme `vps-hostinger` online (mesmo setup do [sistemaloja](https://github.com/murillobeltrame/sistemaloja)).
+**Workflow em fila / runner offline:** Settings → Actions → Runners → confirme `vps-hostinger` online (mesmo setup do [sistemaloja](https://github.com/murillobeltrame/nivesistemaserp)).
 
 **Deploy manual no VPS:** `bash /var/www/mailcow-infra/deploy/deploy-on-vps.sh`
 

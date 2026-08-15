@@ -36,16 +36,15 @@ function NiveIcon({ className }: { className?: string }) {
 
 export function BrandMark({ className, size = "md", variant = "solid" }: BrandMarkProps) {
   return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-xl",
-        containerSizes[size],
-        variants[variant],
-        className,
-      )}
-      aria-hidden
-    >
-      <NiveIcon className={iconSizes[size]} />
+    <div className={cn("shrink-0", containerSizes[size], className)} aria-hidden>
+      <div
+        className={cn(
+          "flex h-full w-full items-center justify-center rounded-xl",
+          variants[variant],
+        )}
+      >
+        <NiveIcon className={cn("block", iconSizes[size])} />
+      </div>
     </div>
   );
 }

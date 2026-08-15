@@ -121,12 +121,27 @@ export async function listFolders(session: MailSession): Promise<FolderInfo[]> {
   }
 }
 
+export type MessageStatusFilter = "seen" | "unseen";
+
+function buildMessageSearch(query?: string, status?: MessageStatusFilter) {
+  const text = query?.trim();
+  const or = text ? [{ subject: text }, { from: text }, { body: text }] : undefined;
+
+  if (status === "unseen" && or) return { unseen: true, or };
+  if (status === "seen" && or) return { seen: true, or };
+  if (status === "unseen") return { unseen: true };
+  if (status === "seen") return { seen: true };
+  if (or) return { or };
+  return { all: true };
+}
+
 export async function listMessages(
   session: MailSession,
   folder: string,
   page = 0,
   limit = 40,
-  query?: string
+  query?: string,
+  status?: MessageStatusFilter,
 ): Promise<{ messages: MessageSummary[]; total: number }> {
   const client = createImapClient(session);
   await client.connect();
@@ -136,19 +151,8 @@ export async function listMessages(
     const total = mailbox && typeof mailbox !== "boolean" ? mailbox.exists : 0;
     if (total === 0 && !query?.trim()) return { messages: [], total: 0 };
 
-    let uids: number[] = [];
-    if (query?.trim()) {
-      const found = await client.search(
-        {
-          or: [{ subject: query }, { from: query }, { body: query }],
-        },
-        { uid: true }
-      );
-      uids = Array.isArray(found) ? found.slice().reverse() : [];
-    } else {
-      const found = await client.search({ all: true }, { uid: true });
-      uids = Array.isArray(found) ? found.slice().reverse() : [];
-    }
+    const found = await client.search(buildMessageSearch(query, status), { uid: true });
+    const uids = Array.isArray(found) ? found.slice().reverse() : [];
 
     const slice = uids.slice(page * limit, (page + 1) * limit);
     const messages: MessageSummary[] = [];
@@ -185,6 +189,13 @@ export async function listMessages(
         preview,
       });
     }
+
+    // ImapFlow devolve o fetch em ordem crescente de UID; a lista deve ser mais recente primeiro.
+    messages.sort((a, b) => {
+      const byDate = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (byDate !== 0) return byDate;
+      return b.uid - a.uid;
+    });
 
     return { messages, total: uids.length };
   } finally {

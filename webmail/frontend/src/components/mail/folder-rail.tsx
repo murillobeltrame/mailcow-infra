@@ -36,7 +36,7 @@ export function FolderRail({
       )}
       aria-label="Pastas"
     >
-      <BrandMark size="md" variant="soft" className="mb-4 hidden shrink-0 md:block" />
+      <BrandMark size="md" variant="soft" className="mb-4 hidden shrink-0 md:flex" />
 
       <button
         type="button"
@@ -45,7 +45,7 @@ export function FolderRail({
         aria-label="Nova mensagem"
         title="Nova mensagem"
       >
-        <PenLine className="h-5 w-5" />
+        <PenLine className="block h-5 w-5" />
       </button>
 
       <div className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto scrollbar-thin px-1">
@@ -75,7 +75,7 @@ export function FolderRail({
                 aria-current={active ? "page" : undefined}
                 aria-label={`${folder.name}${unseen ? `, ${unseen} não lidas` : ""}`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="block h-5 w-5" />
                 {unseen > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                     {unseen > 9 ? "9+" : unseen}

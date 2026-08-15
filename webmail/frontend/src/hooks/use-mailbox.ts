@@ -1,10 +1,82 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, type Folder, type MessageSummary } from "@/lib/api";
 import { mailKeys } from "@/lib/query-keys";
 
 const PAGE_SIZE = 40;
+
+type MessagesPage = {
+  messages: MessageSummary[];
+  total: number;
+  page: number;
+};
+
+type MessagesInfinite = {
+  pages: MessagesPage[];
+  pageParams: unknown[];
+};
+
+function sortNewestFirst(messages: MessageSummary[]) {
+  return [...messages].sort((a, b) => {
+    const byDate = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (byDate !== 0) return byDate;
+    return b.uid - a.uid;
+  });
+}
+
+function flattenMessages(data: MessagesInfinite | undefined) {
+  return sortNewestFirst(data?.pages.flatMap((page) => page.messages) ?? []);
+}
+
+function listTotal(data: MessagesInfinite | undefined) {
+  return data?.pages[0]?.total ?? 0;
+}
+
+function removeFromPages(data: MessagesInfinite | undefined, uid: number) {
+  if (!data) return { data, removed: undefined as MessageSummary | undefined };
+  let removed: MessageSummary | undefined;
+  const pages = data.pages.map((page) => ({
+    ...page,
+    messages: page.messages.filter((message) => {
+      if (message.uid !== uid) return true;
+      removed = message;
+      return false;
+    }),
+  }));
+
+  if (!removed) return { data, removed: undefined };
+
+  const nextTotal = Math.max(0, listTotal(data) - 1);
+  return {
+    data: {
+      ...data,
+      pages: pages.map((page) => ({ ...page, total: nextTotal })),
+    },
+    removed,
+  };
+}
+
+function prependToPages(data: MessagesInfinite | undefined, message: MessageSummary): MessagesInfinite {
+  if (!data) {
+    return {
+      pages: [{ messages: [message], total: 1, page: 0 }],
+      pageParams: [0],
+    };
+  }
+
+  return {
+    ...data,
+    pages: data.pages.map((page, index) => ({
+      ...page,
+      total: page.total + 1,
+      messages:
+        index === 0
+          ? [message, ...page.messages.filter((item) => item.uid !== message.uid)]
+          : page.messages.filter((item) => item.uid !== message.uid),
+    })),
+  };
+}
 
 export function useMailbox() {
   const queryClient = useQueryClient();
@@ -35,10 +107,10 @@ export function useMailbox() {
     void queryClient.invalidateQueries({ queryKey: mailKeys.folders });
   }, [queryClient]);
 
-  const messagesQuery = useInfiniteQuery({
-    queryKey: mailKeys.messages(activeFolder, searchQuery),
+  const unreadQuery = useInfiniteQuery({
+    queryKey: mailKeys.messages(activeFolder, searchQuery, "unseen"),
     queryFn: ({ pageParam = 0 }) =>
-      api.messages(activeFolder, pageParam, searchQuery || undefined).then((r) => ({
+      api.messages(activeFolder, pageParam, searchQuery || undefined, "unseen").then((r) => ({
         messages: r.messages,
         total: r.total,
         page: pageParam,
@@ -49,10 +121,24 @@ export function useMailbox() {
     enabled: !!activeFolder,
   });
 
-  const messages = useMemo(
-    () => messagesQuery.data?.pages.flatMap((p) => p.messages) ?? [],
-    [messagesQuery.data],
-  );
+  const readQuery = useInfiniteQuery({
+    queryKey: mailKeys.messages(activeFolder, searchQuery, "seen"),
+    queryFn: ({ pageParam = 0 }) =>
+      api.messages(activeFolder, pageParam, searchQuery || undefined, "seen").then((r) => ({
+        messages: r.messages,
+        total: r.total,
+        page: pageParam,
+      })),
+    initialPageParam: 0,
+    getNextPageParam: (last) =>
+      (last.page + 1) * PAGE_SIZE < last.total ? last.page + 1 : undefined,
+    enabled: !!activeFolder,
+  });
+
+  const unreadMessages = useMemo(() => flattenMessages(unreadQuery.data), [unreadQuery.data]);
+  const readMessages = useMemo(() => flattenMessages(readQuery.data), [readQuery.data]);
+  const unreadTotal = listTotal(unreadQuery.data);
+  const readTotal = listTotal(readQuery.data);
 
   const messageQuery = useQuery({
     queryKey: mailKeys.message(activeFolder, selectedUid ?? 0),
@@ -70,6 +156,33 @@ export function useMailbox() {
     setActiveFolder(path);
     setSelectedUid(null);
   }, []);
+
+  const selectMessage = useCallback(
+    (uid: number) => {
+      setSelectedUid(uid);
+
+      const unreadKey = mailKeys.messages(activeFolder, searchQuery, "unseen");
+      const readKey = mailKeys.messages(activeFolder, searchQuery, "seen");
+      const { data: nextUnread, removed } = removeFromPages(
+        queryClient.getQueryData<MessagesInfinite>(unreadKey),
+        uid,
+      );
+      if (!removed) return;
+
+      queryClient.setQueryData<MessagesInfinite>(unreadKey, nextUnread);
+      queryClient.setQueryData<MessagesInfinite>(readKey, (old) =>
+        prependToPages(old, { ...removed, seen: true }),
+      );
+      queryClient.setQueryData<Folder[]>(mailKeys.folders, (folders) =>
+        folders?.map((folder) =>
+          folder.path === activeFolder && (folder.unseen ?? 0) > 0
+            ? { ...folder, unseen: Math.max(0, (folder.unseen ?? 1) - 1) }
+            : folder,
+        ),
+      );
+    },
+    [activeFolder, queryClient, searchQuery],
+  );
 
   const submitSearch = useCallback(() => {
     setSearchQuery(searchInput.trim());
@@ -179,11 +292,17 @@ export function useMailbox() {
   return {
     folders: foldersQuery.data ?? [],
     foldersLoading: foldersQuery.isLoading,
-    messages,
-    messagesLoading: messagesQuery.isLoading,
-    messagesFetchingMore: messagesQuery.isFetchingNextPage,
-    hasMoreMessages: messagesQuery.hasNextPage,
-    loadMoreMessages: () => messagesQuery.fetchNextPage(),
+    unreadMessages,
+    readMessages,
+    unreadTotal,
+    readTotal,
+    messagesLoading: unreadQuery.isPending || readQuery.isPending,
+    unreadFetchingMore: unreadQuery.isFetchingNextPage,
+    readFetchingMore: readQuery.isFetchingNextPage,
+    hasMoreUnread: unreadQuery.hasNextPage,
+    hasMoreRead: readQuery.hasNextPage,
+    loadMoreUnread: () => unreadQuery.fetchNextPage(),
+    loadMoreRead: () => readQuery.fetchNextPage(),
     message: messageQuery.data ?? null,
     messageLoading: messageQuery.isPending,
     messageError: messageQuery.error,
@@ -193,6 +312,7 @@ export function useMailbox() {
     searchInput,
     setSearchInput,
     selectFolder,
+    selectMessage,
     setSelectedUid,
     submitSearch,
     refresh,
@@ -210,7 +330,7 @@ export function useMailbox() {
     bulkDelete,
     bulkDeleting: bulkDeleteMutation.isPending,
     foldersError: foldersQuery.error,
-    messagesError: messagesQuery.error,
+    messagesError: unreadQuery.error ?? readQuery.error,
     refetchFolders,
   };
 }

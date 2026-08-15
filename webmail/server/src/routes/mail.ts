@@ -44,13 +44,21 @@ export async function registerMailRoutes(app: FastifyInstance) {
   app.get("/api/messages", async (request, reply) => {
     try {
       const session = mailSession(request);
-      const q = request.query as { folder?: string; page?: string; limit?: string; q?: string };
+      const q = request.query as {
+        folder?: string;
+        page?: string;
+        limit?: string;
+        q?: string;
+        status?: string;
+      };
+      const status = q.status === "seen" || q.status === "unseen" ? q.status : undefined;
       return await listMessages(
         session,
         q.folder ?? "INBOX",
         parseInt(q.page ?? "0", 10),
         parseInt(q.limit ?? "40", 10),
         q.q,
+        status,
       );
     } catch (err) {
       return handleRouteError(reply, err);

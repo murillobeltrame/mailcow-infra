@@ -34,7 +34,7 @@ export function MessageCard({ message, selected, onSelect, bulkMode, checked, on
         selected
           ? "bg-accent shadow-sm ring-1 ring-primary/20"
           : "hover:bg-muted/70",
-        !message.seen && !selected && "bg-surface"
+        !message.seen && !selected && "bg-surface",
       )}
     >
       <div className="flex gap-3">
@@ -47,9 +47,12 @@ export function MessageCard({ message, selected, onSelect, bulkMode, checked, on
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className={cn("truncate text-sm", !message.seen && "font-semibold")}>{sender}</span>
+            <span className={cn("truncate text-sm", !message.seen && "font-bold")}>{sender}</span>
             <time
-              className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+              className={cn(
+                "shrink-0 text-[11px] tabular-nums",
+                !message.seen ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
               dateTime={message.date}
             >
               {formatRelativeDate(message.date)}
@@ -59,7 +62,7 @@ export function MessageCard({ message, selected, onSelect, bulkMode, checked, on
           <div className="mt-0.5 flex items-center gap-1">
             {message.flagged && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
             {message.hasAttachments && <Paperclip className="h-3 w-3 text-muted-foreground" />}
-            <p className={cn("truncate text-sm", !message.seen ? "font-medium text-foreground" : "text-foreground/80")}>
+            <p className={cn("truncate text-sm", !message.seen ? "font-semibold text-foreground" : "text-foreground/80")}>
               {message.subject || "(Sem assunto)"}
             </p>
           </div>
