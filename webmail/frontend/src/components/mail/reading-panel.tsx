@@ -1,10 +1,10 @@
-import DOMPurify from "dompurify";
 import { ArrowLeft, Forward, Mail, MailOpen, Paperclip, Reply, Star, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Folder, MessageDetail } from "@/lib/api";
 import { api } from "@/lib/api";
+import { openMailLink, sanitizeMailHtml, splitTextLinks } from "@/lib/sanitize-mail-html";
 import { initials } from "@/lib/utils";
 
 type ReadingPanelProps = {
@@ -41,8 +41,12 @@ export function ReadingPanel({
   onMove,
 }: ReadingPanelProps) {
   const safeHtml = useMemo(
-    () => (message?.html ? DOMPurify.sanitize(message.html, { USE_PROFILES: { html: true } }) : ""),
+    () => (message?.html ? sanitizeMailHtml(message.html) : ""),
     [message?.html],
+  );
+  const textParts = useMemo(
+    () => (message?.text && !message.html ? splitTextLinks(message.text) : []),
+    [message?.html, message?.text],
   );
 
   const backBar =
@@ -181,9 +185,23 @@ export function ReadingPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin p-5 sm:p-6">
         {safeHtml ? (
-          <div className="mail-body" dangerouslySetInnerHTML={{ __html: safeHtml }} />
+          <div
+            className="mail-body"
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+            onClick={openMailLink}
+          />
         ) : (
-          <pre className="mail-body whitespace-pre-wrap font-sans">{message.text || ""}</pre>
+          <pre className="mail-body whitespace-pre-wrap font-sans">
+            {textParts.map((part, index) =>
+              part.href ? (
+                <a key={`${part.href}-${index}`} href={part.href} target="_blank" rel="noopener noreferrer">
+                  {part.text}
+                </a>
+              ) : (
+                <span key={index}>{part.text}</span>
+              ),
+            )}
+          </pre>
         )}
 
         {message.attachments.length > 0 && (
