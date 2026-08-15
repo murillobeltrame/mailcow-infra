@@ -45,28 +45,34 @@ export function ReadingPanel({
     [message?.html],
   );
 
+  const backBar =
+    showBack && onBack ? (
+      <div className="shrink-0 border-b border-border/60 px-4 py-2">
+        <Button variant="ghost" size="sm" className="rounded-lg" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+      </div>
+    ) : null;
+
   if (loading) {
     return (
-      <section className="mail-surface flex min-w-0 flex-1 flex-col p-6">
-        <Skeleton className="mb-4 h-10 w-10 rounded-full" />
-        <Skeleton className="mb-2 h-7 w-3/4 max-w-lg" />
-        <Skeleton className="mb-6 h-4 w-1/3" />
-        <Skeleton className="h-48 w-full rounded-xl" />
+      <section className="mail-surface min-w-0 flex-1 flex-col">
+        {backBar}
+        <div className="p-6">
+          <Skeleton className="mb-4 h-10 w-10 rounded-full" />
+          <Skeleton className="mb-2 h-7 w-3/4 max-w-lg" />
+          <Skeleton className="mb-6 h-4 w-1/3" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
       </section>
     );
   }
 
   if (error && !message) {
     return (
-      <section className="mail-surface flex min-w-0 flex-1 flex-col">
-        {showBack && onBack && (
-          <div className="border-b border-border/60 px-4 py-2 md:hidden">
-            <Button variant="ghost" size="sm" className="rounded-lg" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4" />
-              Voltar
-            </Button>
-          </div>
-        )}
+      <section className="mail-surface min-w-0 flex-1 flex-col">
+        {backBar}
         <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
           <p className="text-base font-medium">Não foi possível abrir o e-mail</p>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
@@ -79,14 +85,14 @@ export function ReadingPanel({
 
   if (!message) {
     return (
-      <section className="mail-surface hidden min-w-0 flex-1 flex-col items-center justify-center md:flex">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <Mail className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
+      <section className="mail-surface min-w-0 flex-1 flex-col">
+        {backBar}
+        <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <Mail className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
+          </div>
+          <p className="mt-4 text-base font-medium">Selecione um e-mail</p>
         </div>
-        <p className="mt-4 text-base font-medium">Selecione um e-mail</p>
-        <p className="mt-1 max-w-xs text-center text-sm text-muted-foreground">
-          Escolha uma mensagem na lista ao lado para visualizar o conteúdo.
-        </p>
       </section>
     );
   }
@@ -95,15 +101,8 @@ export function ReadingPanel({
   const moveTargets = folders.filter((f) => f.path !== folder);
 
   return (
-    <section className="mail-surface flex min-w-0 flex-1 flex-col">
-      {showBack && onBack && (
-        <div className="border-b border-border/60 px-4 py-2 md:hidden">
-          <Button variant="ghost" size="sm" className="rounded-lg" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      )}
+    <section className="mail-surface min-w-0 flex-1 flex-col">
+      {backBar}
 
       <header className="shrink-0 border-b border-border/60 p-5 sm:p-6">
         <div className="flex flex-wrap items-start gap-4">

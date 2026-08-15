@@ -123,6 +123,28 @@ export async function listFolders(session: MailSession): Promise<FolderInfo[]> {
 
 export type MessageStatusFilter = "seen" | "unseen";
 
+const HEADER_LINE =
+  /^(return-path|delivered-to|received|from|to|cc|bcc|reply-to|subject|date|message-id|mime-version|content-type|content-transfer-encoding|content-disposition|dkim-signature|arc-|authentication-results|received-spf|x-[\w-]+):/i;
+
+function extractPreview(raw: string): string {
+  const normalized = raw.replace(/\r\n/g, "\n");
+  const sep = normalized.indexOf("\n\n");
+  let body = sep > -1 ? normalized.slice(sep + 2) : normalized;
+  const lines = body.split("\n");
+  const start = lines.findIndex((line) => {
+    const trimmed = line.trim();
+    return trimmed.length > 0 && !HEADER_LINE.test(trimmed) && !/^\s/.test(line);
+  });
+  body = (start >= 0 ? lines.slice(start) : lines).join(" ");
+  return body
+    .replace(/<[^>]+>/g, " ")
+    .replace(/=\n/g, "")
+    .replace(/=[0-9A-F]{2}/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+}
+
 function buildMessageSearch(query?: string, status?: MessageStatusFilter) {
   const text = query?.trim();
   const or = text ? [{ subject: text }, { from: text }, { body: text }] : undefined;
@@ -163,20 +185,11 @@ export async function listMessages(
       envelope: true,
       flags: true,
       bodyStructure: true,
-      source: { start: 0, maxLength: 512 },
+      source: { start: 0, maxLength: 8192 },
     }, { uid: true })) {
       const from = msg.envelope?.from?.[0];
       const subject = msg.envelope?.subject ?? "(Sem assunto)";
-      let preview = "";
-      if (msg.source) {
-        const raw = msg.source.toString("utf8");
-        const bodyStart = raw.indexOf("\r\n\r\n");
-        preview = (bodyStart > -1 ? raw.slice(bodyStart + 4) : raw)
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 140);
-      }
+      const preview = msg.source ? extractPreview(msg.source.toString("utf8")) : "";
       messages.push({
         uid: msg.uid,
         subject,

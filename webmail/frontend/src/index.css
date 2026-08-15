@@ -44,6 +44,13 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
@@ -63,7 +70,7 @@
   }
 
   .mail-shell {
-    @apply flex h-full min-h-0 flex-col overflow-hidden bg-background p-2 sm:p-3;
+    @apply flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background p-2 sm:p-3;
   }
 
   .mail-workspace {
@@ -75,8 +82,9 @@
   }
 
   .mail-body {
-    @apply text-[15px] leading-relaxed text-foreground;
+    @apply max-w-full text-[15px] leading-relaxed text-foreground;
     overflow-wrap: anywhere;
+    overflow-x: auto;
   }
 
   .mail-body img {

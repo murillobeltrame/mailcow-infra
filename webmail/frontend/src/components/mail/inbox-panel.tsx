@@ -126,7 +126,7 @@ export function InboxPanel({
   const empty = !loading && unreadMessages.length === 0 && readMessages.length === 0;
 
   return (
-    <section className="mail-surface flex w-full shrink-0 flex-col md:w-[340px] lg:w-[380px]">
+    <section className="mail-surface min-w-0 flex-1 flex-col">
       <header className="shrink-0 space-y-3 border-b border-border/60 p-4">
         <div className="flex items-center justify-between gap-2">
           <div>

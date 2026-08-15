@@ -1,6 +1,6 @@
 import { Paperclip, Star } from "lucide-react";
 import type { MessageSummary } from "@/lib/api";
-import { cn, formatRelativeDate, initials } from "@/lib/utils";
+import { cleanMessagePreview, cn, formatRelativeDate, initials } from "@/lib/utils";
 
 type MessageCardProps = {
   message: MessageSummary;
@@ -13,6 +13,7 @@ type MessageCardProps = {
 
 export function MessageCard({ message, selected, onSelect, bulkMode, checked, onCheck }: MessageCardProps) {
   const sender = message.fromName || message.from.split("@")[0];
+  const preview = cleanMessagePreview(message.preview);
 
   return (
     <div className="flex items-start gap-1">
@@ -67,8 +68,8 @@ export function MessageCard({ message, selected, onSelect, bulkMode, checked, on
             </p>
           </div>
 
-          {message.preview && (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{message.preview}</p>
+          {preview && (
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{preview}</p>
           )}
         </div>
       </div>

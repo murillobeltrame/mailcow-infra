@@ -30,6 +30,17 @@ export function formatRelativeDate(iso: string) {
   return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
+export function cleanMessagePreview(text: string) {
+  if (!text) return "";
+  return text
+    .replace(
+      /(?:^|\s)(?:return-path|delivered-to|received|from|to|cc|bcc|reply-to|subject|date|message-id|mime-version|content-type|content-transfer-encoding|content-disposition|dkim-signature|authentication-results|received-spf|x-[\w-]+):/gi,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function initials(name?: string, email?: string) {
   const source = name || email || "?";
   const parts = source.replace(/<[^>]+>/g, "").trim().split(/\s+/);

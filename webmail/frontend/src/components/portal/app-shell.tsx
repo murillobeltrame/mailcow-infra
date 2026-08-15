@@ -36,7 +36,7 @@ export function AppShell() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <header className="flex shrink-0 items-center gap-4 border-b border-border/70 bg-surface px-4 py-3">
         <BrandLogo />
         <nav className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -72,7 +72,7 @@ export function AppShell() {
           </button>
         </div>
       </header>
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </main>
     </div>

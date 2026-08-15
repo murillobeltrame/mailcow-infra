@@ -1,5 +1,5 @@
 import { Menu, PenLine } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ComposeSheet, type ComposeDefaults } from "@/components/mail/compose-sheet";
 import { FolderRail } from "@/components/mail/folder-rail";
 import { InboxPanel } from "@/components/mail/inbox-panel";
@@ -7,7 +7,6 @@ import { ReadingPanel } from "@/components/mail/reading-panel";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/auth-context";
 import { useMailbox } from "@/hooks/use-mailbox";
-import { cn } from "@/lib/utils";
 
 export function MailApp() {
   const { user } = useAuth();
@@ -72,27 +71,39 @@ export function MailApp() {
   };
 
   const showingMessage = mailbox.selectedUid !== null;
+  const closeMessage = () => mailbox.setSelectedUid(null);
+
+  useEffect(() => {
+    if (!showingMessage) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") mailbox.setSelectedUid(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mailbox.setSelectedUid, showingMessage]);
 
   return (
     <div className="mail-shell p-2 md:p-4">
-      <header className="mb-2 flex shrink-0 items-center gap-2 md:hidden">
-        <Button
-          variant="outline"
-          size="icon"
-          className="rounded-xl bg-surface"
-          onClick={() => setFoldersOpen(true)}
-          aria-label="Pastas"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{mailbox.activeFolderName}</p>
-          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-        </div>
-        <Button size="icon" className="rounded-xl" onClick={openCompose} aria-label="Escrever">
-          <PenLine className="h-4 w-4" />
-        </Button>
-      </header>
+      {!showingMessage && (
+        <header className="mb-2 flex shrink-0 items-center gap-2 md:hidden">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-xl bg-surface"
+            onClick={() => setFoldersOpen(true)}
+            aria-label="Pastas"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{mailbox.activeFolderName}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          </div>
+          <Button size="icon" className="rounded-xl" onClick={openCompose} aria-label="Escrever">
+            <PenLine className="h-4 w-4" />
+          </Button>
+        </header>
+      )}
 
       <div className="mail-workspace">
         <FolderRail
@@ -132,88 +143,60 @@ export function MailApp() {
           </div>
         )}
 
-        <div className="flex min-h-0 min-w-0 flex-1 gap-2 sm:gap-3">
-          <div className={cn("flex min-h-0 min-w-0 flex-1 gap-2 sm:gap-3", showingMessage && "max-md:hidden")}>
-            <InboxPanel
-              folderName={mailbox.activeFolderName}
-              unreadMessages={mailbox.unreadMessages}
-              readMessages={mailbox.readMessages}
-              unreadTotal={mailbox.unreadTotal}
-              readTotal={mailbox.readTotal}
-              selectedUid={mailbox.selectedUid}
-              loading={mailbox.messagesLoading}
-              searchInput={mailbox.searchInput}
-              onSearchChange={mailbox.setSearchInput}
-              onSearchSubmit={mailbox.submitSearch}
-              onSelect={mailbox.selectMessage}
-              onRefresh={mailbox.refresh}
-              refreshing={mailbox.refreshing}
-              hasMoreUnread={mailbox.hasMoreUnread}
-              hasMoreRead={mailbox.hasMoreRead}
-              loadingMoreUnread={mailbox.unreadFetchingMore}
-              loadingMoreRead={mailbox.readFetchingMore}
-              onLoadMoreUnread={mailbox.loadMoreUnread}
-              onLoadMoreRead={mailbox.loadMoreRead}
-              bulkMode={mailbox.bulkMode}
-              selectedUids={mailbox.selectedUids}
-              onToggleBulkMode={mailbox.toggleBulkMode}
-              onToggleUid={mailbox.toggleUid}
-              onBulkDelete={mailbox.bulkDelete}
-              bulkDeleting={mailbox.bulkDeleting}
-            />
-            <ReadingPanel
-              message={mailbox.message}
-              loading={mailbox.messageLoading && showingMessage}
-              error={mailbox.messageError}
-              folder={mailbox.activeFolder}
-              folders={mailbox.folders}
-              onReply={openReply}
-              onReplyAll={openReplyAll}
-              onForward={openForward}
-              onDelete={() => {
-                if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
-              }}
-              onToggleFlag={(flagged) => {
-                if (mailbox.selectedUid !== null) mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
-              }}
-              onMarkUnread={() => {
-                if (mailbox.selectedUid !== null) mailbox.markUnread(mailbox.selectedUid);
-              }}
-              onMove={(to) => {
-                if (mailbox.selectedUid !== null) mailbox.moveMessage({ uid: mailbox.selectedUid, to });
-              }}
-            />
-          </div>
-
-          {showingMessage && (
-            <div className="flex min-h-0 min-w-0 flex-1 md:hidden">
-              <ReadingPanel
-                message={mailbox.message}
-                loading={mailbox.messageLoading}
-                error={mailbox.messageError}
-                folder={mailbox.activeFolder}
-                folders={mailbox.folders}
-                showBack
-                onBack={() => mailbox.setSelectedUid(null)}
-                onReply={openReply}
-                onReplyAll={openReplyAll}
-                onForward={openForward}
-                onDelete={() => {
-                  if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
-                }}
-                onToggleFlag={(flagged) => {
-                  if (mailbox.selectedUid !== null) mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
-                }}
-                onMarkUnread={() => {
-                  if (mailbox.selectedUid !== null) mailbox.markUnread(mailbox.selectedUid);
-                }}
-                onMove={(to) => {
-                  if (mailbox.selectedUid !== null) mailbox.moveMessage({ uid: mailbox.selectedUid, to });
-                }}
-              />
-            </div>
-          )}
-        </div>
+        {showingMessage ? (
+          <ReadingPanel
+            message={mailbox.message}
+            loading={mailbox.messageLoading}
+            error={mailbox.messageError}
+            folder={mailbox.activeFolder}
+            folders={mailbox.folders}
+            showBack
+            onBack={closeMessage}
+            onReply={openReply}
+            onReplyAll={openReplyAll}
+            onForward={openForward}
+            onDelete={() => {
+              if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
+            }}
+            onToggleFlag={(flagged) => {
+              if (mailbox.selectedUid !== null) mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
+            }}
+            onMarkUnread={() => {
+              if (mailbox.selectedUid !== null) mailbox.markUnread(mailbox.selectedUid);
+            }}
+            onMove={(to) => {
+              if (mailbox.selectedUid !== null) mailbox.moveMessage({ uid: mailbox.selectedUid, to });
+            }}
+          />
+        ) : (
+          <InboxPanel
+            folderName={mailbox.activeFolderName}
+            unreadMessages={mailbox.unreadMessages}
+            readMessages={mailbox.readMessages}
+            unreadTotal={mailbox.unreadTotal}
+            readTotal={mailbox.readTotal}
+            selectedUid={mailbox.selectedUid}
+            loading={mailbox.messagesLoading}
+            searchInput={mailbox.searchInput}
+            onSearchChange={mailbox.setSearchInput}
+            onSearchSubmit={mailbox.submitSearch}
+            onSelect={mailbox.selectMessage}
+            onRefresh={mailbox.refresh}
+            refreshing={mailbox.refreshing}
+            hasMoreUnread={mailbox.hasMoreUnread}
+            hasMoreRead={mailbox.hasMoreRead}
+            loadingMoreUnread={mailbox.unreadFetchingMore}
+            loadingMoreRead={mailbox.readFetchingMore}
+            onLoadMoreUnread={mailbox.loadMoreUnread}
+            onLoadMoreRead={mailbox.loadMoreRead}
+            bulkMode={mailbox.bulkMode}
+            selectedUids={mailbox.selectedUids}
+            onToggleBulkMode={mailbox.toggleBulkMode}
+            onToggleUid={mailbox.toggleUid}
+            onBulkDelete={mailbox.bulkDelete}
+            bulkDeleting={mailbox.bulkDeleting}
+          />
+        )}
       </div>
 
       <ComposeSheet open={composeOpen} onClose={closeCompose} defaults={composeDefaults} onSent={mailbox.refreshAll} />
