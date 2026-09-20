@@ -363,6 +363,8 @@ export function AdminPage() {
               id="da-password"
               value={daPassword}
               onChange={(e) => setDaPassword(e.target.value)}
+              onGenerate={setDaPassword}
+              autoComplete="new-password"
             />
           </div>
         </div>
@@ -509,7 +511,13 @@ export function AdminPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="mb-pass">Senha</Label>
-            <PasswordInput id="mb-pass" value={mbPassword} onChange={(e) => setMbPassword(e.target.value)} />
+            <PasswordInput
+              id="mb-pass"
+              value={mbPassword}
+              onChange={(e) => setMbPassword(e.target.value)}
+              onGenerate={setMbPassword}
+              autoComplete="new-password"
+            />
           </div>
         </div>
         <Button

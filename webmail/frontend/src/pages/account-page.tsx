@@ -289,7 +289,16 @@ export function AccountPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="new-pw">Nova senha</Label>
-            <PasswordInput id="new-pw" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput
+              id="new-pw"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onGenerate={(pwd) => {
+                setPassword(pwd);
+                setPassword2(pwd);
+              }}
+              autoComplete="new-password"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-pw2">Confirmar senha</Label>
@@ -351,7 +360,13 @@ export function AccountPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="app-pass">Senha do app</Label>
-            <PasswordInput id="app-pass" value={appPass} onChange={(e) => setAppPass(e.target.value)} />
+            <PasswordInput
+              id="app-pass"
+              value={appPass}
+              onChange={(e) => setAppPass(e.target.value)}
+              onGenerate={setAppPass}
+              autoComplete="new-password"
+            />
           </div>
         </div>
         <Button

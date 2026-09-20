@@ -151,7 +151,13 @@ export function DomainPage() {
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="da-pass">Senha</Label>
-                <PasswordInput id="da-pass" value={mbPassword} onChange={(e) => setMbPassword(e.target.value)} />
+                <PasswordInput
+                  id="da-pass"
+                  value={mbPassword}
+                  onChange={(e) => setMbPassword(e.target.value)}
+                  onGenerate={setMbPassword}
+                  autoComplete="new-password"
+                />
               </div>
             </div>
             <Button

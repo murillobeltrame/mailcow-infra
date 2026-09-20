@@ -352,6 +352,10 @@ export function MailboxListTable({ mailboxes, loading, scope, emptyMessage, onCh
                       id="mb-edit-pass"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onGenerate={(pwd) => {
+                        setPassword(pwd);
+                        setPasswordConfirm(pwd);
+                      }}
                       placeholder="Opcional"
                       autoComplete="new-password"
                     />
