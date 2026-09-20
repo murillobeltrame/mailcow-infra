@@ -21,6 +21,23 @@ export type MailSession = PortalSession & { email: string; password: string };
 
 const SESSION_VERSION = "v1";
 const sessions = new Map<string, PortalSession>();
+/** IDs/tokens destruídos no logout — impede cookie legado ou resposta em voo de recriar a sessão. */
+const revokedUntil = new Map<string, number>();
+
+function revokeId(id: string, ttlMs = config.sessionTtlMs) {
+  revokedUntil.set(id, Date.now() + Math.max(ttlMs, 60_000));
+}
+
+export function isRevoked(id: string | undefined): boolean {
+  if (!id) return false;
+  const until = revokedUntil.get(id);
+  if (until === undefined) return false;
+  if (until < Date.now()) {
+    revokedUntil.delete(id);
+    return false;
+  }
+  return true;
+}
 
 /** Token legado (cookie stateless com senha embutida) — compatibilidade temporária. */
 function unsealLegacyToken(token: string, secret: string): PortalSession | null {
@@ -50,6 +67,7 @@ function unsealLegacyToken(token: string, secret: string): PortalSession | null 
 }
 
 function persistSession(session: PortalSession) {
+  if (isRevoked(session.id)) return;
   sessions.set(session.id, session);
 }
 
@@ -67,7 +85,7 @@ export function createSession(
 }
 
 export function getSession(id: string | undefined): PortalSession | null {
-  if (!id) return null;
+  if (!id || isRevoked(id)) return null;
   const session = sessions.get(id);
   if (!session) return null;
   if (session.expiresAt < Date.now()) {
@@ -78,24 +96,31 @@ export function getSession(id: string | undefined): PortalSession | null {
 }
 
 export function destroySession(id: string | undefined) {
-  if (id) sessions.delete(id);
+  if (!id) return;
+  sessions.delete(id);
+  revokeId(id);
 }
 
 /** Resolve sessão a partir do valor do cookie (UUID ou token legado). */
 export function resolveSessionFromCookie(value: string | undefined): PortalSession | null {
-  if (!value) return null;
+  if (!value || isRevoked(value)) return null;
 
   const fromStore = getSession(value);
-  if (fromStore) return fromStore;
+  if (fromStore) {
+    if (isRevoked(fromStore.id)) return null;
+    return fromStore;
+  }
 
   const legacy = unsealLegacyToken(value, config.cookieSecret);
   if (!legacy) return null;
+  if (isRevoked(legacy.id)) return null;
 
   persistSession(legacy);
   return legacy;
 }
 
 export function touchSession(session: PortalSession, ttlMs: number): PortalSession {
+  if (isRevoked(session.id)) return session;
   session.expiresAt = Date.now() + ttlMs;
   persistSession(session);
   return session;
@@ -110,5 +135,8 @@ setInterval(() => {
   const now = Date.now();
   for (const [id, session] of sessions) {
     if (session.expiresAt < now) sessions.delete(id);
+  }
+  for (const [id, until] of revokedUntil) {
+    if (until < now) revokedUntil.delete(id);
   }
 }, 60 * 60 * 1000).unref();

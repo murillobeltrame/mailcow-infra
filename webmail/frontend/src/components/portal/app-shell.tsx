@@ -28,7 +28,6 @@ export function AppShell() {
 
   const handleLogout = async () => {
     try {
-      toast.success("Sessão encerrada");
       await logout();
     } catch {
       toast.error("Erro ao sair");

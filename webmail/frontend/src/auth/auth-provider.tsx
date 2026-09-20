@@ -54,13 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    await queryClient.cancelQueries();
     try {
-      await api.logout();
+      await runWithoutUnauthorizedHandler(() => api.logout());
     } catch {
       /* cookie pode já ter sido limpo */
     }
     queryClient.clear();
     setUser(null);
+    window.location.replace(LOGIN_URL);
   }, [queryClient]);
 
   const value = useMemo(

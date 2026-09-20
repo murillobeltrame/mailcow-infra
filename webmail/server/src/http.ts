@@ -9,6 +9,7 @@ import {
 } from "./session.js";
 
 const SESSION_REFRESHED = Symbol("sessionRefreshed");
+const SESSION_CLEARED = Symbol("sessionCleared");
 
 export const SESSION_COOKIE = "nive_mail_session";
 export const COOKIE_PATH = process.env.COOKIE_PATH ?? "/mail/";
@@ -67,6 +68,14 @@ export function wasSessionRefreshed(reply: FastifyReply): boolean {
   return (reply as FastifyReply & { [SESSION_REFRESHED]?: boolean })[SESSION_REFRESHED] === true;
 }
 
+export function wasSessionCleared(reply: FastifyReply): boolean {
+  return (reply as FastifyReply & { [SESSION_CLEARED]?: boolean })[SESSION_CLEARED] === true;
+}
+
+function markSessionCleared(reply: FastifyReply) {
+  (reply as FastifyReply & { [SESSION_CLEARED]?: boolean })[SESSION_CLEARED] = true;
+}
+
 export function requireRoleSession(request: FastifyRequest, ...roles: UserRole[]): PortalSession {
   const session = requireSession(request);
   if (!roles.includes(session.role)) {
@@ -86,14 +95,20 @@ export function setSessionCookie(reply: FastifyReply, session: PortalSession) {
 
 export function clearSessionCookie(reply: FastifyReply) {
   const expired = new Date(0);
-  const base = sessionCookieOptions();
   for (const path of CLEAR_PATHS) {
-    for (const signed of [false, true] as const) {
-      const opts = { ...base, path, maxAge: 0, expires: expired, signed };
+    for (const secure of [true, false]) {
+      const opts = {
+        path,
+        httpOnly: true,
+        sameSite: "lax" as const,
+        secure,
+        maxAge: 0,
+        expires: expired,
+      };
       reply.clearCookie(SESSION_COOKIE, opts);
-      reply.setCookie(SESSION_COOKIE, "", opts);
     }
   }
+  reply.clearCookie("PHPSESSID", { path: "/", maxAge: 0, expires: expired });
 }
 
 export function handleRouteError(reply: FastifyReply, err: unknown) {
@@ -114,13 +129,12 @@ export function publicUser(session: PortalSession) {
 
 /** Invalida sessão server-side e remove cookies do browser. */
 export function terminateSession(request: FastifyRequest, reply: FastifyReply) {
+  const cookieVal = getSessionCookieValue(request);
   const session = getRequestSession(request);
-  if (session) {
-    destroySession(session.id);
-  } else {
-    destroySession(getSessionCookieValue(request));
-  }
+  if (session) destroySession(session.id);
+  destroySession(cookieVal);
   clearSessionCookie(reply);
+  markSessionCleared(reply);
   reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
   reply.header("Pragma", "no-cache");
 }

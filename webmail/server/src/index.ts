@@ -4,7 +4,7 @@ import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import fs from "node:fs";
 import { config } from "./config.js";
-import { getRequestSession, refreshSessionCookie, wasSessionRefreshed } from "./http.js";
+import { getRequestSession, refreshSessionCookie, wasSessionCleared, wasSessionRefreshed } from "./http.js";
 import { touchSession } from "./session.js";
 import { registerAccountRoutes } from "./routes/account.js";
 import { registerAdminRoutes, registerDomainRoutes } from "./routes/admin.js";
@@ -25,7 +25,14 @@ await app.register(cors, { origin: true, credentials: true });
 await app.register(cookie, { secret: config.cookieSecret, hook: "onRequest" });
 
 app.addHook("onSend", async (request, reply, payload) => {
-  if (!request.url.startsWith("/api/") || reply.statusCode >= 400 || wasSessionRefreshed(reply)) {
+  const url = request.url.split("?")[0] ?? request.url;
+  if (
+    !url.startsWith("/api/") ||
+    url === "/api/auth/logout" ||
+    reply.statusCode >= 400 ||
+    wasSessionRefreshed(reply) ||
+    wasSessionCleared(reply)
+  ) {
     return payload;
   }
   const session = getRequestSession(request);
