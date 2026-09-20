@@ -36,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -186,7 +186,11 @@ export const api = {
     });
   },
   logout() {
-    return request<{ ok: boolean }>("/api/auth/logout", { method: "POST", cache: "no-store" });
+    return request<{ ok: boolean }>("/api/auth/logout", {
+      method: "POST",
+      body: "{}",
+      cache: "no-store",
+    });
   },
   me() {
     return request<{ user: User | null }>("/api/auth/me", { cache: "no-store" }).then((r) => r.user);
