@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "tsx --test src/session.test.ts"
+    "test": "tsx --test src/session.test.ts src/client-ip.test.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

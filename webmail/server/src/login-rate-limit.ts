@@ -1,20 +1,13 @@
+import { clientIpFromRequest, type ClientIpRequest } from "./client-ip.js";
+
+export { clientIpFromRequest };
+
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
-export function clientIpFromRequest(req: {
-  ip?: string;
-  headers?: Record<string, unknown>;
-}): string {
-  const forwarded = req.headers?.["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-  return req.ip || "unknown";
-}
-
 export function checkLoginRateLimit(
-  req: { ip?: string; headers?: Record<string, unknown> },
+  req: ClientIpRequest,
   loginAs = "user",
 ): { ok: true } | { ok: false; message: string } {
   const maxDefault = loginAs === "user" ? 30 : 15;

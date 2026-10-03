@@ -1,3 +1,5 @@
+import { clientIpFromRequest, type ClientIpRequest } from "./client-ip.js";
+
 const DEFAULT_CMS_URL = "http://127.0.0.1:3000";
 
 function cmsUrl(): string {
@@ -5,16 +7,8 @@ function cmsUrl(): string {
   return (raw || DEFAULT_CMS_URL).replace(/\/$/, "");
 }
 
-function clientIp(req: { ip?: string; headers?: Record<string, unknown> }): string {
-  const forwarded = req.headers?.["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-  return req.ip || "unknown";
-}
-
 export function reportLoginFailureToNive(
-  req: { ip?: string; headers?: Record<string, unknown> },
+  req: ClientIpRequest,
   email: string,
   service = "nive-webmail",
 ): void {
@@ -31,7 +25,7 @@ export function reportLoginFailureToNive(
       "Content-Type": "application/json",
       "X-Provisioning-Secret": secret,
     },
-    body: JSON.stringify({ ip: clientIp(req), email, service }),
+    body: JSON.stringify({ ip: clientIpFromRequest(req), email, service }),
   })
     .catch(() => undefined)
     .finally(() => clearTimeout(timeout));
