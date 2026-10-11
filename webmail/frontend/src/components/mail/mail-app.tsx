@@ -25,7 +25,7 @@ export function MailApp() {
   const openReply = () => {
     if (!mailbox.message) return;
     setComposeDefaults({
-      to: mailbox.message.from,
+      to: mailbox.message.replyTo?.address ?? mailbox.message.from,
       subject: mailbox.message.subject,
       mode: "reply",
     });
@@ -145,6 +145,7 @@ export function MailApp() {
 
         {showingMessage ? (
           <ReadingPanel
+            selfEmail={user.email}
             message={mailbox.message}
             loading={mailbox.messageLoading}
             error={mailbox.messageError}

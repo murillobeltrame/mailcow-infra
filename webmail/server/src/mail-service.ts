@@ -23,9 +23,15 @@ export type MessageSummary = {
   preview: string;
 };
 
+export type MailAddress = { name?: string; address: string };
+
 export type MessageDetail = MessageSummary & {
   to: string[];
   cc: string[];
+  toList: MailAddress[];
+  ccList: MailAddress[];
+  replyTo?: MailAddress;
+  messageId?: string;
   html?: string;
   text?: string;
   attachments: { filename: string; contentType: string; size: number }[];
@@ -145,6 +151,30 @@ function extractPreview(raw: string): string {
     .slice(0, 140);
 }
 
+function plainFromHtml(html: string): string {
+  return html
+    .replace(/<(style|script|head)[\s\S]*?(<\/\1>|$)/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#?\w+;/g, " ");
+}
+
+/** Preview legível: decodifica MIME/quoted-printable com o parser; cai no extrator simples se falhar. */
+async function buildPreview(source: Buffer): Promise<string> {
+  try {
+    const parsed = await simpleParser(source);
+    const html = typeof parsed.html === "string" ? parsed.html : "";
+    const text = (parsed.text?.trim() ? parsed.text : plainFromHtml(html)).replace(/\s+/g, " ").trim();
+    if (text) return text.slice(0, 140);
+  } catch {
+    /* mensagem truncada ou malformada */
+  }
+  return extractPreview(source.toString("utf8"));
+}
+
 function buildMessageSearch(query?: string, status?: MessageStatusFilter) {
   const text = query?.trim();
   const or = text ? [{ subject: text }, { from: text }, { body: text }] : undefined;
@@ -189,7 +219,7 @@ export async function listMessages(
     }, { uid: true })) {
       const from = msg.envelope?.from?.[0];
       const subject = msg.envelope?.subject ?? "(Sem assunto)";
-      const preview = msg.source ? extractPreview(msg.source.toString("utf8")) : "";
+      const preview = msg.source ? await buildPreview(msg.source) : "";
       messages.push({
         uid: msg.uid,
         subject,
@@ -274,6 +304,7 @@ async function getMessageInner(session: MailSession, folder: string, uid: number
 
     const parsed = await simpleParser(rawBuffer);
     const from = parsed.from?.value?.[0];
+    const replyToAddress = parsed.replyTo?.value?.[0];
 
     const toAddresses = Array.isArray(parsed.to)
       ? parsed.to.flatMap((g) => g.value)
@@ -289,11 +320,21 @@ async function getMessageInner(session: MailSession, folder: string, uid: number
       fromName: from?.name,
       to: toAddresses.map((a) => formatAddress(a)),
       cc: ccAddresses.map((a) => formatAddress(a)),
+      toList: toAddresses
+        .filter((a) => a.address)
+        .map((a) => ({ name: a.name || undefined, address: a.address as string })),
+      ccList: ccAddresses
+        .filter((a) => a.address)
+        .map((a) => ({ name: a.name || undefined, address: a.address as string })),
+      replyTo: replyToAddress?.address
+        ? { name: replyToAddress.name || undefined, address: replyToAddress.address }
+        : undefined,
+      messageId: parsed.messageId,
       date: parsed.date?.toISOString() ?? new Date().toISOString(),
       seen: true,
       flagged: false,
       hasAttachments: (parsed.attachments?.length ?? 0) > 0,
-      preview: parsed.text?.slice(0, 140) ?? "",
+      preview: parsed.text?.replace(/\s+/g, " ").trim().slice(0, 140) ?? "",
       html: parsed.html || undefined,
       text: parsed.text || undefined,
       attachments: (parsed.attachments ?? []).map((a) => ({

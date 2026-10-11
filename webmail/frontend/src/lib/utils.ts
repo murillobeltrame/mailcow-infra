@@ -15,19 +15,47 @@ export function asArray<T>(value: unknown): T[] {
   return values as T[];
 }
 
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/** Hoje → hora; ontem; últimos dias → dia da semana; mesmo ano → dia/mês; antes → dia/mês/ano. */
 export function formatRelativeDate(iso: string) {
   const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
   const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) {
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  if (days <= 0) {
     return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   }
   if (days === 1) return "Ontem";
-  if (days < 7) {
-    return date.toLocaleDateString("pt-BR", { weekday: "short" });
+  if (days < 7) return date.toLocaleDateString("pt-BR", { weekday: "short" });
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   }
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+export function formatFullDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("pt-BR", { dateStyle: "full", timeStyle: "short" });
+}
+
+export function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1).replace(".", ",") + " MB";
+}
+
+/** Cor estável por remetente, para distinguir remetentes de relance na lista. */
+export function avatarStyle(seed?: string) {
+  const text = (seed || "?").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  const hue = hash % 360;
+  return { backgroundImage: `linear-gradient(135deg, hsl(${hue} 55% 50%), hsl(${(hue + 24) % 360} 55% 40%))` };
 }
 
 export function cleanMessagePreview(text: string) {

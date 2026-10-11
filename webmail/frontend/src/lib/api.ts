@@ -164,9 +164,15 @@ export type MessageSummary = {
   preview: string;
 };
 
+export type MailAddress = { name?: string; address: string };
+
 export type MessageDetail = MessageSummary & {
   to: string[];
   cc: string[];
+  toList?: MailAddress[];
+  ccList?: MailAddress[];
+  replyTo?: MailAddress;
+  messageId?: string;
   html?: string;
   text?: string;
   attachments: { filename: string; contentType: string; size: number }[];

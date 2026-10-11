@@ -1,4 +1,4 @@
-import { Inbox, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Inbox, RefreshCw, Search, SearchX, Trash2, X } from "lucide-react";
 import { MessageCard } from "@/components/mail/message-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -123,31 +123,35 @@ export function InboxPanel({
   bulkDeleting,
 }: InboxPanelProps) {
   const total = unreadTotal + readTotal;
+  const searching = !loading && searchInput.trim().length > 0 && !refreshing;
   const empty = !loading && unreadMessages.length === 0 && readMessages.length === 0;
 
   return (
     <section className="mail-surface min-w-0 flex-1 flex-col">
       <header className="shrink-0 space-y-3 border-b border-border/60 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">{folderName}</h1>
-            <p className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold tracking-tight">{folderName}</h1>
+            <p className="text-xs text-muted-foreground" aria-live="polite">
               {loading
                 ? "Carregando…"
                 : refreshing
                   ? "Atualizando…"
-                  : unreadTotal > 0
-                    ? `${unreadTotal} não lid${unreadTotal === 1 ? "o" : "os"} · ${readTotal} lid${readTotal === 1 ? "o" : "os"}`
-                    : `${total} mensagen${total === 1 ? "" : "s"}`}
+                  : searching
+                    ? `${total} resultado${total === 1 ? "" : "s"} para "${searchInput.trim()}"`
+                    : unreadTotal > 0
+                      ? `${unreadTotal} não lid${unreadTotal === 1 ? "o" : "os"} · ${readTotal} lid${readTotal === 1 ? "o" : "os"}`
+                      : `${total} mensagen${total === 1 ? "" : "s"}`}
             </p>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-xl"
+            className="h-9 w-9 shrink-0 rounded-xl"
             onClick={onRefresh}
             disabled={refreshing}
             aria-label="Atualizar"
+            title="Atualizar"
           >
             <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
           </Button>
@@ -155,24 +159,32 @@ export function InboxPanel({
             <Button
               variant={bulkMode ? "default" : "outline"}
               size="sm"
-              className="rounded-xl text-xs"
+              className="shrink-0 rounded-xl text-xs"
               onClick={onToggleBulkMode}
+              aria-pressed={bulkMode}
             >
-              Selecionar
+              {bulkMode ? "Cancelar" : "Selecionar"}
             </Button>
           )}
         </div>
-        {bulkMode && selectedUids && selectedUids.size > 0 && onBulkDelete && (
-          <Button
-            variant="destructive"
-            size="sm"
-            className="rounded-xl"
-            disabled={bulkDeleting}
-            onClick={onBulkDelete}
-          >
-            <Trash2 className="mr-1 h-4 w-4" />
-            Excluir ({selectedUids.size})
-          </Button>
+        {bulkMode && onBulkDelete && (
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-2">
+            <span className="text-xs text-muted-foreground">
+              {selectedUids && selectedUids.size > 0
+                ? `${selectedUids.size} selecionad${selectedUids.size === 1 ? "o" : "os"}`
+                : "Marque os e-mails que quer excluir"}
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-lg"
+              disabled={bulkDeleting || !selectedUids || selectedUids.size === 0}
+              onClick={onBulkDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
+            </Button>
+          </div>
         )}
 
         <div className="relative">
@@ -182,10 +194,23 @@ export function InboxPanel({
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && onSearchSubmit()}
-            placeholder="Buscar e-mails…"
-            className="search-input"
+            placeholder="Buscar por assunto, remetente ou texto…"
+            className="search-input pr-10"
             aria-label="Buscar e-mails"
           />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => {
+                onSearchChange("");
+                onSearchSubmit();
+              }}
+              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Limpar busca"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -205,10 +230,18 @@ export function InboxPanel({
         ) : empty ? (
           <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-              <Inbox className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />
+              {searchInput.trim() ? (
+                <SearchX className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />
+              ) : (
+                <Inbox className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />
+              )}
             </div>
-            <p className="text-sm font-medium">Caixa vazia</p>
-            <p className="text-xs text-muted-foreground">Nenhum e-mail nesta pasta.</p>
+            <p className="text-sm font-medium">{searchInput.trim() ? "Nada encontrado" : "Caixa vazia"}</p>
+            <p className="text-xs text-muted-foreground">
+              {searchInput.trim()
+                ? "Tente outro termo ou limpe a busca."
+                : "Nenhum e-mail nesta pasta."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
