@@ -31,7 +31,11 @@ function apiUrl(path: string): string {
   return `${API_BASE}${path.replace(/^\//, "")}`;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  opts?: { skipUnauthorizedHandler?: boolean },
+): Promise<T> {
   const res = await fetch(apiUrl(path), {
     ...init,
     credentials: "include",
@@ -42,7 +46,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 401 && onUnauthorized && !suppressUnauthorized) onUnauthorized();
+    if (res.status === 401 && onUnauthorized && !suppressUnauthorized && !opts?.skipUnauthorizedHandler) {
+      onUnauthorized();
+    }
     throw new ApiError((data as { error?: string }).error ?? "Erro na requisição", res.status);
   }
   return data as T;
@@ -180,10 +186,12 @@ export type MessageDetail = MessageSummary & {
 
 export const api = {
   login(login: string, password: string, loginAs: UserRole = "user") {
-    return request<User>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ login, password, loginAs }),
-    });
+    // 401 aqui é senha errada, não sessão vencida: o formulário mostra o erro.
+    return request<User>(
+      "/api/auth/login",
+      { method: "POST", body: JSON.stringify({ login, password, loginAs }) },
+      { skipUnauthorizedHandler: true },
+    );
   },
   fido2Session(subject: string, role?: UserRole) {
     return request<User>("/api/auth/fido2-session", {
