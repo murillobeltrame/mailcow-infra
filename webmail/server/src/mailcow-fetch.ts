@@ -21,11 +21,12 @@ type MailcowResponse = {
 
 export async function mailcowFetch(
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string },
+  init?: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number },
 ): Promise<MailcowResponse> {
   const { statusCode, body } = await request(url, {
     method: init?.method,
     body: init?.body,
+    signal: init?.timeoutMs ? AbortSignal.timeout(init.timeoutMs) : undefined,
     headers: {
       Host: config.mailcowHostname,
       ...init?.headers,

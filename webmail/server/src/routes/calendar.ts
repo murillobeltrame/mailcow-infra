@@ -65,15 +65,16 @@ export async function registerCalendarRoutes(app: FastifyInstance) {
   app.post("/api/calendar/events", async (request, reply) => {
     try {
       const session = requireRoleSession(request, "user");
-      const body = request.body as { href?: string; summary?: string };
-      if (!session.email || !session.password || !body.href || !body.summary) {
+      const body = request.body as { href?: string; summary?: string; start?: string };
+      if (!session.email || !session.password || !body.href || !body.summary?.trim()) {
         return reply.status(400).send({ error: "href e summary obrigatórios" });
       }
       const id = await createCalendarEvent(
         session.email,
         session.password,
         body.href,
-        body.summary,
+        body.summary.trim(),
+        body.start,
       );
       return { ok: true, id };
     } catch (err) {

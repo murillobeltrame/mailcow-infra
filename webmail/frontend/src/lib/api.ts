@@ -437,7 +437,9 @@ export const api = {
     return request<{ calendars: { href: string; name: string }[] }>("/api/calendar/calendars");
   },
   calendarEvents(href: string) {
-    return request<{ events: { summary: string; raw: string; path?: string }[] }>(
+    return request<{
+      events: { summary: string; start?: string; end?: string; location?: string; raw: string; path?: string }[];
+    }>(
       `/api/calendar/events?href=${encodeURIComponent(href)}`,
     );
   },
@@ -445,7 +447,7 @@ export const api = {
     return request<{ books: { href: string; name: string }[] }>("/api/contacts/books");
   },
   contacts(href: string) {
-    return request<{ contacts: { fn: string; email?: string; path?: string }[] }>(
+    return request<{ contacts: { fn: string; email?: string; phone?: string; path?: string }[] }>(
       `/api/contacts/list?href=${encodeURIComponent(href)}`,
     );
   },
@@ -561,10 +563,10 @@ export const api = {
     });
   },
   /** CalDAV/CardDAV write */
-  createCalendarEvent(href: string, summary: string) {
+  createCalendarEvent(href: string, summary: string, start?: string) {
     return request<{ ok: boolean; id: string }>("/api/calendar/events", {
       method: "POST",
-      body: JSON.stringify({ href, summary }),
+      body: JSON.stringify({ href, summary, start }),
     });
   },
   deleteCalendarEvent(path: string) {

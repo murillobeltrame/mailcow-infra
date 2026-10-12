@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,17 @@ export function CalendarPage() {
   const qc = useQueryClient();
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState("");
+  const [newStart, setNewStart] = useState("");
 
   const calendarsQuery = useQuery({
     queryKey: ["calendar", "calendars"],
     queryFn: () => api.calendars().then((r) => r.calendars),
   });
+
+  const firstHref = asArray<{ href: string }>(calendarsQuery.data)[0]?.href ?? null;
+  useEffect(() => {
+    if (!selectedHref && firstHref) setSelectedHref(firstHref);
+  }, [selectedHref, firstHref]);
 
   const eventsQuery = useQuery({
     queryKey: ["calendar", "events", selectedHref],
@@ -26,10 +32,15 @@ export function CalendarPage() {
   });
 
   const createEvent = useMutation({
-    mutationFn: () => api.createCalendarEvent(selectedHref!, newEvent.trim()),
+    mutationFn: () => api.createCalendarEvent(
+        selectedHref!,
+        newEvent.trim(),
+        newStart ? new Date(newStart).toISOString() : undefined,
+      ),
     onSuccess: () => {
       toast.success("Evento criado");
       setNewEvent("");
+      setNewStart("");
       qc.invalidateQueries({ queryKey: ["calendar", "events", selectedHref] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Erro"),
@@ -45,7 +56,18 @@ export function CalendarPage() {
   });
 
   const calendars = asArray<{ href: string; name: string }>(calendarsQuery.data);
-  const events = asArray<{ summary: string; path?: string }>(eventsQuery.data);
+  const events = asArray<{ summary: string; start?: string; location?: string; path?: string }>(
+    eventsQuery.data,
+  );
+
+  const formatStart = (start?: string) => {
+    if (!start) return null;
+    const d = new Date(start);
+    if (Number.isNaN(d.getTime())) return null;
+    return start.length === 10
+      ? d.toLocaleDateString("pt-BR", { timeZone: "UTC" })
+      : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -56,6 +78,18 @@ export function CalendarPage() {
 
       {calendarsQuery.isLoading ? (
         <Skeleton className="h-32 w-full rounded-2xl" />
+      ) : calendarsQuery.isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/70 bg-surface p-12 text-center">
+          <CalendarDays className="h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {calendarsQuery.error instanceof ApiError
+              ? calendarsQuery.error.message
+              : "Não foi possível carregar os calendários"}
+          </p>
+          <Button variant="outline" className="rounded-xl" onClick={() => calendarsQuery.refetch()}>
+            Tentar novamente
+          </Button>
+        </div>
       ) : calendars.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/70 bg-surface p-12 text-center">
           <CalendarDays className="h-12 w-12 text-muted-foreground" />
@@ -90,6 +124,20 @@ export function CalendarPage() {
                       placeholder="Reunião, compromisso…"
                       value={newEvent}
                       onChange={(e) => setNewEvent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newEvent.trim() && !createEvent.isPending) {
+                          createEvent.mutate();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-start">Data e hora</Label>
+                    <Input
+                      id="event-start"
+                      type="datetime-local"
+                      value={newStart}
+                      onChange={(e) => setNewStart(e.target.value)}
                     />
                   </div>
                   <Button
@@ -103,6 +151,12 @@ export function CalendarPage() {
                 </div>
                 {eventsQuery.isLoading ? (
                   <Skeleton className="h-48 w-full" />
+                ) : eventsQuery.isError ? (
+                  <p className="text-sm text-destructive">
+                    {eventsQuery.error instanceof ApiError
+                      ? eventsQuery.error.message
+                      : "Não foi possível carregar os eventos"}
+                  </p>
                 ) : (
                   <ul className="space-y-3">
                     {events.map((ev, i) => (
@@ -110,12 +164,20 @@ export function CalendarPage() {
                         key={ev.path ?? i}
                         className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3"
                       >
-                        <p className="font-medium">{ev.summary || "(Sem título)"}</p>
+                        <div>
+                          <p className="font-medium">{ev.summary || "(Sem título)"}</p>
+                          {(formatStart(ev.start) || ev.location) && (
+                            <p className="text-xs text-muted-foreground">
+                              {[formatStart(ev.start), ev.location].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                        </div>
                         {ev.path && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-lg text-destructive"
+                            aria-label="Remover evento"
                             disabled={deleteEvent.isPending}
                             onClick={() => deleteEvent.mutate(ev.path!)}
                           >

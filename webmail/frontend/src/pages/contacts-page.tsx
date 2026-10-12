@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,11 @@ export function ContactsPage() {
     queryKey: ["contacts", "books"],
     queryFn: () => api.contactBooks().then((r) => r.books),
   });
+
+  const firstHref = asArray<{ href: string }>(booksQuery.data)[0]?.href ?? null;
+  useEffect(() => {
+    if (!selectedHref && firstHref) setSelectedHref(firstHref);
+  }, [selectedHref, firstHref]);
 
   const contactsQuery = useQuery({
     queryKey: ["contacts", "list", selectedHref],
@@ -47,7 +52,9 @@ export function ContactsPage() {
   });
 
   const books = asArray<{ href: string; name: string }>(booksQuery.data);
-  const contacts = asArray<{ fn: string; email?: string; path?: string }>(contactsQuery.data);
+  const contacts = asArray<{ fn: string; email?: string; phone?: string; path?: string }>(
+    contactsQuery.data,
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -58,6 +65,18 @@ export function ContactsPage() {
 
       {booksQuery.isLoading ? (
         <Skeleton className="h-32 w-full rounded-2xl" />
+      ) : booksQuery.isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/70 bg-surface p-12 text-center">
+          <Users className="h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {booksQuery.error instanceof ApiError
+              ? booksQuery.error.message
+              : "Não foi possível carregar os contactos"}
+          </p>
+          <Button variant="outline" className="rounded-xl" onClick={() => booksQuery.refetch()}>
+            Tentar novamente
+          </Button>
+        </div>
       ) : books.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/70 bg-surface p-12 text-center">
           <Users className="h-12 w-12 text-muted-foreground" />
@@ -106,6 +125,12 @@ export function ContactsPage() {
                 </div>
                 {contactsQuery.isLoading ? (
                   <Skeleton className="h-48 w-full" />
+                ) : contactsQuery.isError ? (
+                  <p className="text-sm text-destructive">
+                    {contactsQuery.error instanceof ApiError
+                      ? contactsQuery.error.message
+                      : "Não foi possível carregar os contactos"}
+                  </p>
                 ) : (
                   <ul className="divide-y divide-border/60">
                     {contacts.map((c, i) => (
@@ -115,12 +140,16 @@ export function ContactsPage() {
                           {c.email && (
                             <span className="ml-2 text-sm text-muted-foreground">{c.email}</span>
                           )}
+                          {c.phone && (
+                            <span className="ml-2 text-sm text-muted-foreground">{c.phone}</span>
+                          )}
                         </div>
                         {c.path && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-lg text-destructive"
+                            aria-label="Remover contacto"
                             disabled={deleteContact.isPending}
                             onClick={() => deleteContact.mutate(c.path!)}
                           >
