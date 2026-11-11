@@ -47,7 +47,7 @@ export function DomainManagePanel({ domains }: { domains: DomainRow[] }) {
       api.adminCreateDkim({
         domains: dkimDomain,
         dkim_selector: "dkim",
-        key_length: "2048",
+        key_size: "2048",
       }),
     onSuccess: () => {
       toast.success("DKIM gerado");
