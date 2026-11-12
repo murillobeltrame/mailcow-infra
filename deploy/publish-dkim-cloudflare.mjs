@@ -10,15 +10,8 @@ const env = loadEnv(join(__dir, ".env.deploy"));
 const DKIM = {
   "nivesistemas.com.br": {
     zone: env.CLOUDFLARE_ZONE_ID,
-    txt: "v=DKIM1;k=rsa;p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC2RWODA/P1aX/U8EGEiytTW7TldsqT2xBPN9Xqis7GJHwjQXbE7lLUBq9foj34L/0jXCIcROJQtdxZ+GjhGZql9hKDB+9SSsDUp+vli1FTfkr90WFSVciRFQI2usEk/JQcnMO2tUovxXcKftcQRf2QSNtU3eq1lEFIMCZMaKQ3IwIDAQAB",
-  },
-  "corelycommerce.com.br": {
-    zone: env.EXTRA_CLOUDFLARE_ZONE_ID,
-    txt: "v=DKIM1;k=rsa;p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7vGmYbNtmflUGNa/8hfkGRji5TUtKi12wdjHSwOzF2kZySE801p/3XCUqCZQfcrKbUtw2LCmKlS/4hqMZi+lkEsXXvJDH1YkUjwWIxtYkMTdwTuOJc7cIIa5657fbHVYCEsBRgXLgLl5t1UxXRaEdiztdjfYFbNEa8QHCesX/nwIDAQAB",
-  },
-  "storembimportados.com.br": {
-    zone: env.STORE_CLOUDFLARE_ZONE_ID || "a72f58be086db5aaba12d57b80a56be8",
-    txt: "v=DKIM1;k=rsa;p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCWsVfUgCLSIAyWpVWpKdx0YuX6EuDrzBKeBvldRvr1w1VXiRkklerWy3fpnWzMJJcLbVWSV2svbMvC25uLEQ+CvsmtnBbz0d5YQKSz2ivEO+Ti5UYKj4b/Fx/CwEuSEnEf70n9TzHkCPY5KHeeOO4bu2gEqLJquRlfTV9GdcLNQIDAQAB",
+    // Seletor dkim, RSA 2048 (chave atual do Mailcow; a privada fica só no Redis).
+    txt: "v=DKIM1;k=rsa;t=s;s=email;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsUeX1QAwoIwsPGkK3fJ7rYfQ94QEqGBHolOFEOUqV97V+FjJgW+bmbOXqmVpPm0boIUrmxxVO3NR10ZyQBsh9kwDBCArAU9+3rjyG6+eFb8HcNNkqugdYE0X/Gm+LGKjCYTAeU2p6HE9So7EzCnhHB6wjp7sg9FQjzDhOMXcXXAKVKcvq4985jJ1EmzhpZmb/xP00MFESB7wAN021H1jw8veWgYHXVR8iLwSaXDE4jauH/6b5XFbN7WSAx/mIn25ke+4lcci4ZhAff39PypeE3iSsGlUZZdoSctnxZY9AvOX0CfKhctRHgqfm1ZbsAZxM0VgFAUvN332j4GIVcX91QIDAQAB",
   },
 };
 
