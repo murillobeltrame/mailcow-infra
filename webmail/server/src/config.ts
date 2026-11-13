@@ -17,7 +17,11 @@ export const config = {
   smtpTlsServername: process.env.SMTP_TLS_SERVERNAME ?? "mail.nivesistemas.com.br",
   sieveHost: process.env.SIEVE_HOST ?? "dovecot-mailcow",
   sievePort: parseInt(process.env.SIEVE_PORT ?? "4190", 10),
-  sessionTtlMs: parseInt(process.env.SESSION_TTL_MS ?? String(8 * 60 * 60 * 1000), 10),
+  /** Validade deslizante: renova a cada uso; só expira após esse tempo sem acessar. */
+  sessionTtlMs: parseInt(process.env.SESSION_TTL_MS ?? String(30 * 24 * 60 * 60 * 1000), 10),
+  /** Arquivo cifrado com as sessões (sobrevive a restart/deploy). Vazio = só memória. */
+  sessionStorePath: process.env.SESSION_STORE_PATH ?? "",
+  sessionStoreKey: process.env.SESSION_STORE_KEY ?? "",
   cookieSecret: process.env.COOKIE_SECRET ?? "nive-mail-dev-secret-change-in-production",
   frontendDist: process.env.FRONTEND_DIST ?? path.resolve(__dirname, "../../frontend/dist"),
   basePath: process.env.BASE_PATH ?? "/mail",

@@ -1,7 +1,7 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/auth-context";
 import { PageLoader } from "@/components/layout/page-loader";
-import { defaultRouteForRole, type UserRole } from "@/lib/roles";
+import { defaultRouteForRole, postLoginRoute, type UserRole } from "@/lib/roles";
 
 export function ProtectedRoute({
   children,
@@ -11,8 +11,10 @@ export function ProtectedRoute({
   roles?: UserRole[];
 }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to="/login" replace />;
+  // Guarda o link pedido (ex.: e-mail aberto) para voltar a ele depois do login.
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (roles && !roles.includes(user.role)) {
     return <Navigate to={defaultRouteForRole(user.role)} replace />;
   }
@@ -21,7 +23,8 @@ export function ProtectedRoute({
 
 export function GuestRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <PageLoader />;
-  if (user) return <Navigate to={defaultRouteForRole(user.role)} replace />;
+  if (user) return <Navigate to={postLoginRoute(user.role, location.state)} replace />;
   return children;
 }

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { config } from "../config.js";
 import { handleRouteError, requireSession } from "../http.js";
 import {
+  deleteDraft,
   deleteMessages,
   getAttachment,
   getMessage,
@@ -9,6 +10,7 @@ import {
   listMessages,
   markUnread,
   moveMessages,
+  saveDraft,
   sendMail,
   toggleFlag,
 } from "../mail-service.js";
@@ -29,6 +31,10 @@ function mailSession(request: FastifyRequest) {
     throw err;
   }
   return mail;
+}
+
+function positiveInt(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
 }
 
 export async function registerMailRoutes(app: FastifyInstance) {
@@ -99,6 +105,8 @@ export async function registerMailRoutes(app: FastifyInstance) {
         body?: string;
         cc?: string;
         bcc?: string;
+        /** Rascunho de origem: apagado da pasta Rascunhos depois do envio. */
+        draftUid?: number;
         attachments?: { filename: string; contentBase64: string; contentType?: string }[];
       };
       if (!body.to?.trim() || !body.subject?.trim() || !body.body?.trim()) {
@@ -117,6 +125,49 @@ export async function registerMailRoutes(app: FastifyInstance) {
         bcc: body.bcc?.trim(),
         attachments,
       });
+      const draftUid = positiveInt(body.draftUid);
+      if (draftUid) {
+        await deleteDraft(session, draftUid).catch((err) =>
+          console.error("[send] Falha ao apagar rascunho:", err instanceof Error ? err.message : err),
+        );
+      }
+      return { ok: true };
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.post("/api/drafts", async (request, reply) => {
+    try {
+      const session = mailSession(request);
+      const body = (request.body ?? {}) as {
+        to?: string;
+        cc?: string;
+        bcc?: string;
+        subject?: string;
+        body?: string;
+        replaceUid?: number;
+      };
+      const str = (v: unknown) => (typeof v === "string" ? v : "");
+      return await saveDraft(session, {
+        to: str(body.to).trim(),
+        cc: str(body.cc).trim(),
+        bcc: str(body.bcc).trim(),
+        subject: str(body.subject).trim(),
+        body: str(body.body),
+        replaceUid: positiveInt(body.replaceUid),
+      });
+    } catch (err) {
+      return handleRouteError(reply, err);
+    }
+  });
+
+  app.delete("/api/drafts/:uid", async (request, reply) => {
+    try {
+      const session = mailSession(request);
+      const uid = positiveInt(Number((request.params as { uid: string }).uid));
+      if (!uid) return reply.status(400).send({ error: "uid inválido" });
+      await deleteDraft(session, uid);
       return { ok: true };
     } catch (err) {
       return handleRouteError(reply, err);

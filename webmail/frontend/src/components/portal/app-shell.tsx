@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -21,6 +21,8 @@ const nav: NavItem[] = [
 
 export function AppShell() {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+  const inMail = pathname === "/" || pathname.startsWith("/folder/") || pathname === "/compose";
 
   if (!user) return null;
 
@@ -47,7 +49,7 @@ export function AppShell() {
               className={({ isActive }) =>
                 cn(
                   "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
+                  (item.to === "/" ? inMail : isActive)
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )
