@@ -177,6 +177,7 @@ export type MessageDetail = MessageSummary & {
   cc: string[];
   toList?: MailAddress[];
   ccList?: MailAddress[];
+  bccList?: MailAddress[];
   replyTo?: MailAddress;
   messageId?: string;
   html?: string;
@@ -230,12 +231,27 @@ export const api = {
     body: string;
     cc?: string;
     bcc?: string;
+    draftUid?: number;
     attachments?: { filename: string; contentBase64: string; contentType?: string }[];
   }) {
     return request<{ ok: boolean }>("/api/messages/send", {
       method: "POST",
       body: JSON.stringify(data),
     });
+  },
+  /** Grava o rascunho na pasta Rascunhos; `keepalive` deixa a gravação terminar ao fechar a aba. */
+  saveDraft(
+    data: { to: string; cc: string; bcc: string; subject: string; body: string; replaceUid?: number },
+    keepalive = false,
+  ) {
+    return request<{ folder: string; uid: number | null }>("/api/drafts", {
+      method: "POST",
+      body: JSON.stringify(data),
+      keepalive,
+    });
+  },
+  deleteDraft(uid: number) {
+    return request<{ ok: boolean }>(`/api/drafts/${uid}`, { method: "DELETE" });
   },
   deleteMessages(folder: string, uids: number[]) {
     return request<{ ok: boolean }>("/api/messages", {

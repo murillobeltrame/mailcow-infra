@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext, type LoginMode } from "./auth-context";
 import { ApiError, api, runWithoutUnauthorizedHandler, setUnauthorizedHandler } from "@/lib/api";
 import type { User } from "@/lib/api";
-import { defaultRouteForRole } from "@/lib/roles";
+import { postLoginRoute } from "@/lib/roles";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 const LOGIN_URL = `${API_BASE}login`;
@@ -12,6 +12,7 @@ const LOGIN_URL = `${API_BASE}login`;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,17 +41,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new ApiError("Não foi possível iniciar a sessão. Tente novamente.", 401);
       }
       setUser(verified);
-      navigate(defaultRouteForRole(verified.role), { replace: true });
+      navigate(postLoginRoute(verified.role, location.state), { replace: true });
     },
-    [navigate],
+    [navigate, location.state],
   );
 
   const establishSession = useCallback(
     (u: User) => {
       setUser(u);
-      navigate(defaultRouteForRole(u.role), { replace: true });
+      navigate(postLoginRoute(u.role, location.state), { replace: true });
     },
-    [navigate],
+    [navigate, location.state],
   );
 
   const logout = useCallback(async () => {

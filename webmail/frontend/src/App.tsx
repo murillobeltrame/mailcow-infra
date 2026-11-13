@@ -39,6 +39,30 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="/folder/:folder"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <MailboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/compose"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <MailboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/folder/:folder/:uid"
+          element={
+            <ProtectedRoute roles={["user"]}>
+              <MailboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/account"
           element={
             <ProtectedRoute roles={["user"]}>

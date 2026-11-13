@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiError, api, type Folder, type MessageSummary } from "@/lib/api";
 import { mailKeys } from "@/lib/query-keys";
@@ -78,10 +79,42 @@ function prependToPages(data: MessagesInfinite | undefined, message: MessageSumm
   };
 }
 
+const DEFAULT_FOLDER = "INBOX";
+
+/** URL da pasta/mensagem: /folder/<pasta>/<uid> — cada e-mail aberto tem link próprio. */
+export function mailPath(folder: string, uid?: number | null) {
+  if (uid == null) return folder === DEFAULT_FOLDER ? "/" : `/folder/${encodeURIComponent(folder)}`;
+  return `/folder/${encodeURIComponent(folder)}/${uid}`;
+}
+
 export function useMailbox() {
   const queryClient = useQueryClient();
-  const [activeFolder, setActiveFolder] = useState("INBOX");
-  const [selectedUid, setSelectedUid] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams<{ folder?: string; uid?: string }>();
+
+  // Pasta e mensagem abertas vêm da URL (link compartilhável, F5 e voltar/avançar do navegador).
+  const activeFolder = params.folder || DEFAULT_FOLDER;
+  const parsedUid = params.uid ? Number(params.uid) : NaN;
+  const selectedUid = Number.isInteger(parsedUid) && parsedUid > 0 ? parsedUid : null;
+  const openedFromList = (location.state as { fromList?: boolean } | null)?.fromList === true;
+
+  const setSelectedUid = useCallback(
+    (uid: number | null) => {
+      if (uid !== null) {
+        navigate(mailPath(activeFolder, uid), { state: { fromList: true } });
+      } else if (selectedUid === null) {
+        return;
+      } else if (openedFromList) {
+        // Aberta a partir da lista: fechar = voltar no histórico (não empilha entradas).
+        navigate(-1);
+      } else {
+        navigate(mailPath(activeFolder), { replace: true });
+      }
+    },
+    [activeFolder, navigate, openedFromList, selectedUid],
+  );
+
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -152,10 +185,12 @@ export function useMailbox() {
     [foldersQuery.data, activeFolder],
   );
 
-  const selectFolder = useCallback((path: string) => {
-    setActiveFolder(path);
-    setSelectedUid(null);
-  }, []);
+  const selectFolder = useCallback(
+    (path: string) => {
+      navigate(mailPath(path));
+    },
+    [navigate],
+  );
 
   const selectMessage = useCallback(
     (uid: number) => {
@@ -181,13 +216,13 @@ export function useMailbox() {
         ),
       );
     },
-    [activeFolder, queryClient, searchQuery],
+    [activeFolder, queryClient, searchQuery, setSelectedUid],
   );
 
   const submitSearch = useCallback(() => {
     setSearchQuery(searchInput.trim());
     setSelectedUid(null);
-  }, [searchInput]);
+  }, [searchInput, setSelectedUid]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);

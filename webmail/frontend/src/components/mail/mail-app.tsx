@@ -1,6 +1,10 @@
 import { Menu, PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ComposeSheet, type ComposeDefaults } from "@/components/mail/compose-sheet";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  ComposePanel,
+  type ComposeDefaults,
+} from "@/components/mail/compose-panel";
 import { FolderRail } from "@/components/mail/folder-rail";
 import { InboxPanel } from "@/components/mail/inbox-panel";
 import { ReadingPanel } from "@/components/mail/reading-panel";
@@ -11,16 +15,30 @@ import { useMailbox } from "@/hooks/use-mailbox";
 export function MailApp() {
   const { user } = useAuth();
   const mailbox = useMailbox();
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [composeDefaults, setComposeDefaults] = useState<ComposeDefaults | undefined>();
   const [foldersOpen, setFoldersOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  // Escrever é uma página própria (/compose); resposta/encaminhamento chegam pelo state da navegação.
+  const composing = location.pathname === "/compose";
+  const composeState = location.state as {
+    compose?: ComposeDefaults;
+    fromApp?: boolean;
+  } | null;
+  const draftParam = Number(searchParams.get("draft"));
+  const composeDraftUid =
+    Number.isInteger(draftParam) && draftParam > 0 ? draftParam : null;
+  const draftsFolder = mailbox.folders.find(
+    (f) => f.specialUse === "\\Drafts",
+  )?.path;
+
+  const setComposeDefaults = (defaults: ComposeDefaults | undefined) =>
+    navigate("/compose", { state: { compose: defaults, fromApp: true } });
 
   if (!user) return null;
 
-  const openCompose = () => {
-    setComposeDefaults(undefined);
-    setComposeOpen(true);
-  };
+  const openCompose = () => setComposeDefaults(undefined);
 
   const openReply = () => {
     if (!mailbox.message) return;
@@ -29,7 +47,6 @@ export function MailApp() {
       subject: mailbox.message.subject,
       mode: "reply",
     });
-    setComposeOpen(true);
   };
 
   const openReplyAll = () => {
@@ -49,28 +66,41 @@ export function MailApp() {
       subject: mailbox.message.subject,
       mode: "reply-all",
     });
-    setComposeOpen(true);
   };
 
   const openForward = () => {
     if (!mailbox.message) return;
-    const quoted = mailbox.message.text ?? mailbox.message.html?.replace(/<[^>]+>/g, "") ?? "";
+    const quoted =
+      mailbox.message.text ??
+      mailbox.message.html?.replace(/<[^>]+>/g, "") ??
+      "";
     setComposeDefaults({
       subject: mailbox.message.subject,
       body: `\n\n---------- Mensagem encaminhada ----------\nDe: ${mailbox.message.from}\nAssunto: ${mailbox.message.subject}\n\n${quoted}`,
       mode: "forward",
     });
-    setComposeOpen(true);
   };
 
-  const closeCompose = () => setComposeOpen(false);
+  const closeCompose = () => {
+    if (composeState?.fromApp) navigate(-1);
+    else navigate("/", { replace: true });
+  };
+
+  // Na pasta Rascunhos, clicar numa mensagem continua a escrita em vez de só ler.
+  const selectMessage = (uid: number) => {
+    if (draftsFolder && mailbox.activeFolder === draftsFolder) {
+      navigate(`/compose?draft=${uid}`, { state: { fromApp: true } });
+    } else {
+      mailbox.selectMessage(uid);
+    }
+  };
 
   const selectFolder = (path: string) => {
     mailbox.selectFolder(path);
     setFoldersOpen(false);
   };
 
-  const showingMessage = mailbox.selectedUid !== null;
+  const showingMessage = !composing && mailbox.selectedUid !== null;
   const closeMessage = () => mailbox.setSelectedUid(null);
 
   useEffect(() => {
@@ -84,7 +114,7 @@ export function MailApp() {
 
   return (
     <div className="mail-shell p-2 md:p-4">
-      {!showingMessage && (
+      {!showingMessage && !composing && (
         <header className="mb-2 flex shrink-0 items-center gap-2 md:hidden">
           <Button
             variant="outline"
@@ -96,10 +126,19 @@ export function MailApp() {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{mailbox.activeFolderName}</p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="truncate text-sm font-semibold">
+              {mailbox.activeFolderName}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
           </div>
-          <Button size="icon" className="rounded-xl" onClick={openCompose} aria-label="Escrever">
+          <Button
+            size="icon"
+            className="rounded-xl"
+            onClick={openCompose}
+            aria-label="Escrever"
+          >
             <PenLine className="h-4 w-4" />
           </Button>
         </header>
@@ -109,7 +148,8 @@ export function MailApp() {
         <FolderRail
           className="hidden md:flex"
           folders={mailbox.folders}
-          activeFolder={mailbox.activeFolder}
+          activeFolder={composing ? "" : mailbox.activeFolder}
+          composing={composing}
           loading={mailbox.foldersLoading}
           error={mailbox.foldersError}
           onSelectFolder={mailbox.selectFolder}
@@ -128,7 +168,8 @@ export function MailApp() {
             <div className="absolute left-0 top-0 h-full w-20 animate-slide-in-right">
               <FolderRail
                 folders={mailbox.folders}
-                activeFolder={mailbox.activeFolder}
+                activeFolder={composing ? "" : mailbox.activeFolder}
+                composing={composing}
                 loading={mailbox.foldersLoading}
                 error={mailbox.foldersError}
                 onSelectFolder={selectFolder}
@@ -143,7 +184,15 @@ export function MailApp() {
           </div>
         )}
 
-        {showingMessage ? (
+        {composing ? (
+          <ComposePanel
+            key={location.key}
+            defaults={composeState?.compose}
+            draftUid={composeDraftUid}
+            draftsFolder={draftsFolder}
+            onClose={closeCompose}
+          />
+        ) : showingMessage ? (
           <ReadingPanel
             selfEmail={user.email}
             message={mailbox.message}
@@ -157,16 +206,20 @@ export function MailApp() {
             onReplyAll={openReplyAll}
             onForward={openForward}
             onDelete={() => {
-              if (mailbox.selectedUid !== null) mailbox.deleteMessage(mailbox.selectedUid);
+              if (mailbox.selectedUid !== null)
+                mailbox.deleteMessage(mailbox.selectedUid);
             }}
             onToggleFlag={(flagged) => {
-              if (mailbox.selectedUid !== null) mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
+              if (mailbox.selectedUid !== null)
+                mailbox.toggleFlag({ uid: mailbox.selectedUid, flagged });
             }}
             onMarkUnread={() => {
-              if (mailbox.selectedUid !== null) mailbox.markUnread(mailbox.selectedUid);
+              if (mailbox.selectedUid !== null)
+                mailbox.markUnread(mailbox.selectedUid);
             }}
             onMove={(to) => {
-              if (mailbox.selectedUid !== null) mailbox.moveMessage({ uid: mailbox.selectedUid, to });
+              if (mailbox.selectedUid !== null)
+                mailbox.moveMessage({ uid: mailbox.selectedUid, to });
             }}
           />
         ) : (
@@ -181,7 +234,7 @@ export function MailApp() {
             searchInput={mailbox.searchInput}
             onSearchChange={mailbox.setSearchInput}
             onSearchSubmit={mailbox.submitSearch}
-            onSelect={mailbox.selectMessage}
+            onSelect={selectMessage}
             onRefresh={mailbox.refresh}
             refreshing={mailbox.refreshing}
             hasMoreUnread={mailbox.hasMoreUnread}
@@ -199,8 +252,6 @@ export function MailApp() {
           />
         )}
       </div>
-
-      <ComposeSheet open={composeOpen} onClose={closeCompose} defaults={composeDefaults} onSent={mailbox.refreshAll} />
     </div>
   );
 }

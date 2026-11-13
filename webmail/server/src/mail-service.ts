@@ -30,6 +30,8 @@ export type MessageDetail = MessageSummary & {
   cc: string[];
   toList: MailAddress[];
   ccList: MailAddress[];
+  /** Só existe em rascunhos/enviados da própria caixa. */
+  bccList: MailAddress[];
   replyTo?: MailAddress;
   messageId?: string;
   html?: string;
@@ -313,6 +315,10 @@ async function getMessageInner(session: MailSession, folder: string, uid: number
       ? parsed.cc.flatMap((g) => g.value)
       : (parsed.cc?.value ?? []);
 
+    const bccAddresses = Array.isArray(parsed.bcc)
+      ? parsed.bcc.flatMap((g) => g.value)
+      : (parsed.bcc?.value ?? []);
+
     return {
       uid,
       subject: parsed.subject ?? "(Sem assunto)",
@@ -324,6 +330,9 @@ async function getMessageInner(session: MailSession, folder: string, uid: number
         .filter((a) => a.address)
         .map((a) => ({ name: a.name || undefined, address: a.address as string })),
       ccList: ccAddresses
+        .filter((a) => a.address)
+        .map((a) => ({ name: a.name || undefined, address: a.address as string })),
+      bccList: bccAddresses
         .filter((a) => a.address)
         .map((a) => ({ name: a.name || undefined, address: a.address as string })),
       replyTo: replyToAddress?.address
@@ -386,6 +395,78 @@ async function appendToSentFolder(session: MailSession, raw: Buffer) {
       return;
     }
     await client.append(sentPath, raw, ["\\Seen"], new Date());
+  } finally {
+    await client.logout();
+  }
+}
+
+async function resolveDraftsFolder(client: ImapFlow): Promise<string | null> {
+  const mailboxes = await client.list();
+  const drafts = mailboxes.find((box) => box.specialUse === "\\Drafts");
+  if (drafts) return drafts.path;
+
+  const fallbacks = ["Drafts", "Rascunhos", "INBOX.Drafts"];
+  for (const name of fallbacks) {
+    const match = mailboxes.find((box) => box.path === name || box.path.endsWith(`/${name}`));
+    if (match) return match.path;
+  }
+  return null;
+}
+
+/**
+ * Grava (ou regrava) um rascunho na pasta Rascunhos. IMAP não edita mensagem: a versão
+ * nova é anexada e a anterior (replaceUid) é apagada, então o UID muda a cada gravação.
+ */
+export async function saveDraft(
+  session: MailSession,
+  opts: { to?: string; cc?: string; bcc?: string; subject?: string; body?: string; replaceUid?: number },
+): Promise<{ folder: string; uid: number | null }> {
+  const raw = await buildMimeMessage({
+    from: session.name ? `"${session.name}" <${session.email}>` : session.email,
+    to: opts.to || undefined,
+    cc: opts.cc || undefined,
+    bcc: opts.bcc || undefined,
+    subject: opts.subject ?? "",
+    text: opts.body ?? "",
+  });
+
+  const client = createImapClient(session);
+  await client.connect();
+  try {
+    const folder = await resolveDraftsFolder(client);
+    if (!folder) {
+      const err = new Error("Pasta Rascunhos não encontrada") as Error & { statusCode: number };
+      err.statusCode = 404;
+      throw err;
+    }
+    const appended = await client.append(folder, raw, ["\\Draft", "\\Seen"], new Date());
+    if (opts.replaceUid) {
+      const lock = await client.getMailboxLock(folder);
+      try {
+        await client.messageDelete({ uid: String(opts.replaceUid) }, { uid: true });
+      } finally {
+        lock.release();
+      }
+    }
+    return { folder, uid: (appended && appended.uid) || null };
+  } finally {
+    await client.logout();
+  }
+}
+
+/** Remove o rascunho depois que o e-mail foi enviado ou descartado. */
+export async function deleteDraft(session: MailSession, uid: number) {
+  const client = createImapClient(session);
+  await client.connect();
+  try {
+    const folder = await resolveDraftsFolder(client);
+    if (!folder) return;
+    const lock = await client.getMailboxLock(folder);
+    try {
+      await client.messageDelete({ uid: String(uid) }, { uid: true });
+    } finally {
+      lock.release();
+    }
   } finally {
     await client.logout();
   }
