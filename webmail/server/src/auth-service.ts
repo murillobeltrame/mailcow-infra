@@ -66,20 +66,3 @@ export async function authenticateLogin(
     name: lower.split("@")[0],
   };
 }
-
-/** Sessão portal após FIDO2 Mailcow (cookie PHP já validado). */
-export async function sessionFromFido2Subject(subject: string): Promise<LoginResult> {
-  if (subject.toLowerCase() === "admin") {
-    return { role: "admin", subject: "admin", password: "", name: "Administrador" };
-  }
-  if (subject.includes("@")) {
-    return {
-      role: "user",
-      subject: subject.toLowerCase(),
-      email: subject.toLowerCase(),
-      password: "",
-      name: subject.split("@")[0],
-    };
-  }
-  return { role: "domainadmin", subject, password: "", name: subject, domains: [] };
-}

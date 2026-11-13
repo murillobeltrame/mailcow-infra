@@ -59,24 +59,6 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post("/api/auth/fido2-session", async (request, reply) => {
-    try {
-      const body = request.body as { subject?: string; role?: "user" | "admin" | "domainadmin" };
-      if (!body.subject) return reply.status(400).send({ error: "subject obrigatório" });
-      const session = createSession({
-        role: body.role ?? "user",
-        subject: body.subject.toLowerCase(),
-        email: body.subject.includes("@") ? body.subject.toLowerCase() : undefined,
-        name: body.subject.split("@")[0],
-        password: "",
-      }, config.sessionTtlMs);
-      refreshSessionCookie(reply, session);
-      return publicUser(session);
-    } catch (err) {
-      return handleRouteError(reply, err);
-    }
-  });
-
   const handleLogout = async (
     request: Parameters<typeof terminateSession>[0],
     reply: Parameters<typeof terminateSession>[1],

@@ -194,12 +194,6 @@ export const api = {
       { skipUnauthorizedHandler: true },
     );
   },
-  fido2Session(subject: string, role?: UserRole) {
-    return request<User>("/api/auth/fido2-session", {
-      method: "POST",
-      body: JSON.stringify({ subject, role }),
-    });
-  },
   logout() {
     return request<{ ok: boolean }>("/api/auth/logout", {
       method: "POST",

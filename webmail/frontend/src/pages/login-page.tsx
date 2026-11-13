@@ -1,4 +1,4 @@
-import { Mail, ShieldCheck, ShieldEllipsis } from "lucide-react";
+import { Mail, ShieldEllipsis } from "lucide-react";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ApiError } from "@/lib/api";
-import { loginWithFido2 } from "@/lib/fido2-login";
 import { defaultRouteForRole } from "@/lib/roles";
 import { panelUrls } from "@/lib/panel-urls";
 import { cn } from "@/lib/utils";
@@ -41,12 +40,11 @@ const modeLabels: Record<LoginMode, { title: string; hint: string; loginLabel: s
 };
 
 export function LoginPage() {
-  const { user, loading, login, establishSession } = useAuth();
+  const { user, loading, login } = useAuth();
   const [mode, setMode] = useState<LoginMode>("user");
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [fidoLoading, setFidoLoading] = useState(false);
 
   if (loading) return <PageLoader />;
   if (user) return <Navigate to={defaultRouteForRole(user.role)} replace />;
@@ -64,19 +62,6 @@ export function LoginPage() {
       toast.error(err instanceof ApiError ? err.message : "Não foi possível entrar");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleFido2 = async () => {
-    setFidoLoading(true);
-    try {
-      const sessionUser = await loginWithFido2();
-      establishSession(sessionUser);
-      toast.success("Autenticado com FIDO2");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha na autenticação FIDO2");
-    } finally {
-      setFidoLoading(false);
     }
   };
 
@@ -176,28 +161,6 @@ export function LoginPage() {
                     {submitting ? "Entrando…" : "Login"}
                   </Button>
                 </form>
-
-                {mode === "user" && (
-                  <>
-                    <div className="my-6 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-border" />
-                      <span className="text-xs text-muted-foreground">ou faça login com</span>
-                      <div className="h-px flex-1 bg-border" />
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="w-full rounded-xl"
-                      size="lg"
-                      disabled={fidoLoading}
-                      onClick={handleFido2}
-                    >
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      {fidoLoading ? "Aguardando chave…" : "Login do FIDO2/WebAuthn"}
-                    </Button>
-                  </>
-                )}
               </div>
             </div>
           </div>
