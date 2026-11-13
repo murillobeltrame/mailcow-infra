@@ -63,6 +63,17 @@ if [[ -z "${MAILCOW_API_KEY}" ]]; then
   exit 1
 fi
 
+# Sessões do portal persistidas em disco (login sobrevive a deploy/restart).
+# Chave fica em mailcow.conf; o arquivo cifrado, em data/nive-mail-web.
+NIVE_MAIL_SESSION_KEY="$(read_conf_var NIVE_MAIL_SESSION_KEY)"
+if [[ -z "${NIVE_MAIL_SESSION_KEY}" ]]; then
+  NIVE_MAIL_SESSION_KEY="$(openssl rand -hex 32)"
+  echo "NIVE_MAIL_SESSION_KEY=${NIVE_MAIL_SESSION_KEY}" >> "${MAILCOW_DIR}/mailcow.conf"
+  echo "  NIVE_MAIL_SESSION_KEY gerada em mailcow.conf"
+fi
+mkdir -p "${MAILCOW_DIR}/data/nive-mail-web"
+chmod 700 "${MAILCOW_DIR}/data/nive-mail-web"
+
 cat > "${OVERRIDE}" <<EOF
 # Nive Mail — override unificado (SOGo theme, SSO Dovecot, webmail React portal)
 services:
@@ -81,10 +92,14 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - mailcow-network
+    volumes:
+      - ./data/nive-mail-web:/data:z
     environment:
       - NODE_ENV=production
       - PORT=8080
       - COOKIE_PATH=/mail/
+      - SESSION_STORE_PATH=/data/sessions.enc
+      - SESSION_STORE_KEY=${NIVE_MAIL_SESSION_KEY}
       - PROVISIONING_SECRET=${PROVISIONING_SECRET}
       - STEPGO_SITE_API_URL=${STEPGO_SITE_API_URL}
       - RATE_LIMIT_LOGIN_MAX=${RATE_LIMIT_LOGIN_MAX:-30}

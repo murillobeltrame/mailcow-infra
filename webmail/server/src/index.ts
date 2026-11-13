@@ -5,7 +5,7 @@ import Fastify from "fastify";
 import fs from "node:fs";
 import { config } from "./config.js";
 import { getRequestSession, refreshSessionCookie, wasSessionCleared, wasSessionRefreshed } from "./http.js";
-import { touchSession } from "./session.js";
+import { flushSessions, touchSession } from "./session.js";
 import { registerAccountRoutes } from "./routes/account.js";
 import { registerAdminRoutes, registerDomainRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -56,6 +56,14 @@ if (fs.existsSync(distPath)) {
   app.setNotFoundHandler((request, reply) => {
     if (request.url.startsWith("/api/")) return reply.status(404).send({ error: "Rota não encontrada" });
     return reply.sendFile("index.html");
+  });
+}
+
+// Deploy/restart: grava as sessões antes de sair para ninguém precisar logar de novo.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    flushSessions();
+    app.close().finally(() => process.exit(0));
   });
 }
 
